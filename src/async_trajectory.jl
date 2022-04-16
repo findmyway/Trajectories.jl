@@ -34,16 +34,15 @@ RateLimiter(n_samping_per_update, min_sampling_length, buffer_range::Number) = R
 RateLimiter(n_samping_per_update, min_sampling_length, buffer_range) = RateLimiter(n_samping_per_update, min_sampling_length, buffer_range, Ref(false))
 
 """
-    (r::RateLimiter)(trajectory, n_update, n_sample, is_in_ready, is_out_ready)
+    (r::RateLimiter)(n_update, n_sample, is_in_ready, is_out_ready)
 
-- `trajectory`, instance of [`Trajectory`](@ref).
 - `n_update`, number of elements inserted into `trajectory`. 
 - `n_sample`, number of batches sampled from `trajectory`.
 - `is_in_ready`, the `in_channel` has elements to put into `trajectory` or not. 
 - `is_out_ready`, the `out_channel` is ready to consume new samplings or not.
 """
-function (r::RateLimiter)(trajectory, n_update, n_sample, is_in_ready, is_out_ready)
-    if length(trajectory) >= r.min_sampling_length
+function (r::RateLimiter)(n_update, n_sample, is_in_ready, is_out_ready)
+    if n_update >= r.min_sampling_length
         r.is_min_sampling_length_reached[] = true
     end
 
@@ -69,12 +68,10 @@ end
 
 #####
 
-struct PushEvent{T}
-    data::T
-end
-
-struct AppendEvent{T}
-    data::T
+struct CallMsg
+    f::Any
+    args::Tuple
+    kw::Any
 end
 
 struct AsyncTrajectory
@@ -90,23 +87,25 @@ struct AsyncTrajectory
         n_update_ref = Ref(0)
         n_sample_ref = Ref(0)
         task = @async while true
-            decision = rate_limiter(trajectory, n_update, n_sample, isready(channel_in), Base.n_avail(channel_out) < channel_out_size)
+            decision = rate_limiter(n_update, n_sample, isready(channel_in), Base.n_avail(channel_out) < channel_out_size)
             if decision === UPDATE
-                evt = take!(channel_in)
-                if evt isa PushEvent
-                    push!(data, evt.data)
+                msg = take!(channel_in)
+                if msg.f === Base.push!
+                    push!(trajectory, msg.args...; msg.kw...)
                     n_update_ref[] += 1
-                elseif evt isa AppendEvent
-                    append!(data, evt.data)
-                    n_update_ref[] += length(evt.data)
+                elseif msg.f === Base.append!
+                    append!(trajectory, msg.args...; msg.kw...)
+                    n_update_ref[] += length(msg.data)
+                else
+                    msg.f(trajectory, msg.args...; msg.kw...)
                 end
             elseif decision === SAMPLE
-                put!(channel_out, sampling_strategy(data))
+                put!(channel_out, rand(trajectory))
                 n_sample_ref[] += 1
             end
         end
         new(
-            data,
+            trajectory,
             channel_in,
             channel_out,
             task,
@@ -116,6 +115,6 @@ struct AsyncTrajectory
     end
 end
 
-Base.push!(t::AsyncTrajectory, x) = put!(t.in, PushEvent(x))
-Base.append!(t::AsyncTrajectory, x) = put!(t.in, AppendEvent(x))
+Base.push!(t::AsyncTrajectory, args...; kw...) = put!(t.in, CallMsg(Base.push!, args, kw))
+Base.append!(t::AsyncTrajectory, args...; kw...) = put!(t.in, CallMsg(Base.append!, args, kw))
 Base.take!(t::AsyncTrajectory) = take!(t.out)

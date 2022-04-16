@@ -3,6 +3,10 @@ uuid = "6486599b-a3cd-4e92-a99a-2cea90cc8c3c"
 authors = ["Jun Tian <tianjun.cpp@gmail.com> and contributors"]
 version = "0.1.0"
 
+[deps]
+CircularArrayBuffers = "9de3a189-e0c0-4e15-ba3b-b14b9fb0aec1"
+Term = "22787eb5-b846-44ae-b979-8e399b8463ab"
+
 [compat]
 julia = "1.6"
 
