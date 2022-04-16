@@ -1,5 +1,5 @@
 module Trajectories
 
-# Write your package code here.
+include("async_trajectory.jl")
 
 end
