@@ -1,3 +1,5 @@
+# TODO: switch from horizontal rendering to vertical rendering
+
 using Term
 
 TRACE_COLORS = ("bright_green", "hot_pink", "bright_blue", "light_coral", "bright_cyan", "sandy_brown", "violet")
