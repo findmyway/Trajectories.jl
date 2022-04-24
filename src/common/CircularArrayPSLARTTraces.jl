@@ -1,19 +1,19 @@
-const CircularArrayPSLARTTrajectory = Trajectory{
-    <:Traces{
-        PSLART,
-        <:Tuple{
-            <:Trace{<:SumTree},
-            <:Trace{<:CircularArrayBuffer},
-            <:Trace{<:CircularArrayBuffer},
-            <:Trace{<:CircularArrayBuffer},
-            <:Trace{<:CircularArrayBuffer},
-            <:Trace{<:CircularArrayBuffer}
-        }
+export CircularArrayPSLARTTraces
+
+const CircularArrayPSLARTTraces = Traces{
+    PSLART,
+    <:Tuple{
+        <:Trace{<:SumTree},
+        <:Trace{<:CircularArrayBuffer},
+        <:Trace{<:CircularArrayBuffer},
+        <:Trace{<:CircularArrayBuffer},
+        <:Trace{<:CircularArrayBuffer},
+        <:Trace{<:CircularArrayBuffer}
     }
 }
 
 
-function CircularArrayPSLARTTrajectory(;
+function CircularArrayPSLARTTraces(;
     capacity::Int,
     priority=SumTree(capacity),
     state=Int => (),
@@ -28,7 +28,7 @@ function CircularArrayPSLARTTrajectory(;
     reward_eltype, reward_size = reward
     terminal_eltype, terminal_size = terminal
 
-    Trajectory(
+    Traces(
         priority=priority,
         state=CircularArrayBuffer{state_eltype}(state_size..., capacity + 1),  # !!! state is one step longer
         legal_actions_mask=CircularArrayBuffer{legal_actions_mask_eltype}(legal_actions_mask_size..., capacity + 1),  # !!! legal_actions_mask is one step longer

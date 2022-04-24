@@ -1,18 +1,21 @@
-const CircularArraySARTTrajectory = Trajectory{
-    <:Traces{
-        SART,
-        <:Tuple{
-            <:Trace{<:CircularArrayBuffer},
-            <:Trace{<:CircularArrayBuffer},
-            <:Trace{<:CircularArrayBuffer},
-            <:Trace{<:CircularArrayBuffer}
-        }
+export CircularArrayPISARTTraces
+
+const CircularArrayPISARTTraces = Traces{
+    PISART,
+    <:Tuple{
+        <:Trace{<:SumTree},
+        <:Trace{<:CircularArrayBuffer},
+        <:Trace{<:CircularArrayBuffer},
+        <:Trace{<:CircularArrayBuffer},
+        <:Trace{<:CircularArrayBuffer},
+        <:Trace{<:CircularArrayBuffer},
     }
 }
 
 
-function CircularArraySARTTrajectory(;
+function CircularArrayPISARTTraces(;
     capacity::Int,
+    priority=SumTree(capacity),
     state=Int => (),
     action=Int => (),
     reward=Float32 => (),
@@ -23,7 +26,9 @@ function CircularArraySARTTrajectory(;
     reward_eltype, reward_size = reward
     terminal_eltype, terminal_size = terminal
 
-    Trajectory(
+    Traces(
+        priority=priority,
+        id=CircularArrayBuffer{Int}(capacity + 1),
         state=CircularArrayBuffer{state_eltype}(state_size..., capacity + 1),  # !!! state is one step longer
         action=CircularArrayBuffer{action_eltype}(action_size..., capacity + 1),  # !!! action is one step longer
         reward=CircularArrayBuffer{reward_eltype}(reward_size..., capacity),
@@ -31,10 +36,11 @@ function CircularArraySARTTrajectory(;
     )
 end
 
-function Random.rand(s::BatchSampler, t::CircularArraySARTTrajectory)
-    inds = rand(s.rng, 1:length(t), s.batch_size)
+function Random.rand(s::BatchSampler, t::CircularArrayPISARTTraces)
+    inds, priority = rand(s.rng, t[:priority], s.batch_size)
     inds′ = inds .+ 1
     (
+        priority=priority,
         state=t[:state][inds],
         action=t[:action][inds],
         reward=t[:reward][inds],

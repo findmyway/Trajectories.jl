@@ -1,4 +1,4 @@
-export Trace, Traces, Episode, Episodes, pop!!, popfirst!!
+export Trace, Traces
 
 """
     Trace(data)
@@ -33,11 +33,11 @@ Base.empty!(t::Trace) = empty!(t.x)
 
 #####
 
-```
+"""
     Traces(;kw...)
 
 A container of several named-[`Trace`](@ref)s. Each element in the `kw` will be converted into a `Trace`.
-```
+"""
 struct Traces{names,T}
     traces::NamedTuple{names,T}
     function Traces(; kw...)
@@ -69,103 +69,3 @@ end
 Base.pop!(t::Traces) = map(pop!, t.traces)
 Base.popfirst!(t::Traces) = map(popfirst!, t.traces)
 Base.empty!(t::Traces) = map(empty!, t.traces)
-
-#####
-
-struct Episode{T}
-    traces::T
-    is_done::Ref{Bool}
-end
-
-Base.getindex(e::Episode) = getindex(e.is_done)
-Base.setindex!(e::Episode, x::Bool) = setindex!(e.is_done, x)
-
-Episode(t::Traces) = Episode(t, Ref(false))
-
-function Base.append!(t::Episode, x)
-    if t.is_done[]
-        throw(ArgumentError("The episode is already flagged as done!"))
-    else
-        append!(t.traces, x)
-    end
-end
-
-function Base.push!(t::Episode, x)
-    if t.is_done[]
-        throw(ArgumentError("The episode is already flagged as done!"))
-    else
-        push!(t.traces, x)
-    end
-end
-
-function Base.pop!(t::Episode)
-    pop!(t.traces)
-    t.is_done[] = false
-end
-
-Base.popfirst!(t::Episode) = popfirst!(t.traces)
-
-function Base.empty!(t::Episode)
-    empty!(t.traces)
-    t.is_done[] = false
-end
-#####
-
-struct Episodes{T}
-    episodes::Vector{Episode{T}}
-    lengths::Vector{Int}  # TODO: sum tree?
-    total_length::Ref{Int}
-end
-
-function Base.push!(e::Episodes, x)
-    push!(e.episodes[end], x)
-    diff = length(e.episodes[end]) - e.lengths[end]
-    e.lengths[end] += diff
-    e.total_length[] += diff
-end
-
-function Base.push!(e::Episodes, x::Episode)
-    push!(e.episodes, x)
-    push!(e.lengths, length(x))
-    e.total_length[] += length(x)
-end
-
-function Base.append!(e::Episodes, x)
-    append!(e.episodes[end], x)
-    diff = length(e.episodes[end]) - e.lengths[end]
-    e.lengths[end] += diff
-    e.total_length[] += diff
-end
-
-function Base.append!(e::Episodes, x::AbstractVector{<:Episode})
-    append!(e.episodes, x)
-    push!(e.lengths, length(x))
-    e.total_length[] += diff
-end
-
-function Base.pop!(e::Episodes)
-    e.total_length[] -= e.lengths[end]
-    pop!(e.episodes)
-    pop!(e.lengths)
-end
-
-function pop!!(e::Episodes)
-    pop!(e.episodes[end])
-    diff = e.lengths[end] - length(e.episodes[end])
-    e.lengths[end] = length(e.episodes[end])
-    e.total_length[] -= diff
-end
-
-function Base.popfirst!(e::Episodes)
-    diff = length(e.episodes[begin])
-    e.total_length[] -= diff
-    popfirst!(e.episodes)
-    popfirst!(e.lengths)
-end
-
-function popfirst!!(e::Episodes)
-    popfirst!(e.episodes)
-    diff = e.lengths[begin] - length(e.episodes[begin])
-    e.lengths[begin] = length(e.episodes[begin])
-    e.total_length[] -= diff
-end
