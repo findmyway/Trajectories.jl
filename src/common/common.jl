@@ -1,14 +1,10 @@
 using CircularArrayBuffers
 
 const SART = (:state, :action, :reward, :terminal)
+const SARTSA = (:state, :action, :reward, :terminal, :next_state, :next_action)
 const SLART = (:state, :legal_actions_mask, :action, :reward, :terminal)
-const PSART = (:priority, :state, :action, :reward, :terminal)
-const PSLART = (:priority, :state, :legal_actions_mask, :action, :reward, :terminal)
-const PISART = (:priority, :id, :state, :action, :reward, :terminal)
-const PISLART = (:priority, :id, :state, :legal_actions_mask, :action, :reward, :terminal)
+const SLARTSLA = (:state, :legal_actions_mask, :action, :reward, :terminal, :next_state, :next_legal_actions_mask, :next_action)
 
 include("sum_tree.jl")
 include("CircularArraySARTTraces.jl")
 include("CircularArraySLARTTraces.jl")
-include("CircularArrayPSARTTraces.jl")
-include("CircularArrayPSLARTTraces.jl")

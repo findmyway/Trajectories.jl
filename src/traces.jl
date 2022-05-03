@@ -12,9 +12,10 @@ struct Trace{T}
 end
 
 Base.length(t::Trace) = length(t.x)
+Base.length(t::Trace{<:AbstractArray}) = size(t.x, ndims(t.x))
+
 Base.lastindex(t::Trace) = length(t)
 Base.firstindex(t::Trace) = 1
-Base.length(t::Trace{<:AbstractArray}) = size(t.x, ndims(t.x))
 
 Base.convert(::Type{Trace}, x) = Trace(x)
 

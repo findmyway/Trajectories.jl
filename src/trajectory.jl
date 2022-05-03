@@ -15,5 +15,4 @@ Base.pop!(t::Trajectory) = pop!(t.traces)
 Base.empty!(t::Trajectory) = empty!(t.traces)
 
 Base.getindex(t::Trajectory, k) = getindex(t.traces, k)
-
-Base.length(t::Trajectory) = mapreduce(length, min, t.traces)
+Base.length(t::Trajectory) = length(t.traces)
