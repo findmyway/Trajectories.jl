@@ -32,6 +32,13 @@ Base.pop!(t::Trace) = pop!(t.x)
 Base.popfirst!(t::Trace) = popfirst!(t.x)
 Base.empty!(t::Trace) = empty!(t.x)
 
+##
+
+function Random.rand(s::BatchSampler, t::Trace)
+    inds = rand(s.rng, 1:length(t), s.batch_size)
+    t[inds]
+end
+
 #####
 
 """
@@ -50,6 +57,7 @@ end
 Base.keys(t::Traces) = keys(t.traces)
 Base.haskey(t::Traces, s::Symbol) = haskey(t.traces, s)
 Base.getindex(t::Traces, x) = getindex(t.traces, x)
+Base.length(t::Traces) = mapreduce(length, min, t.traces)
 
 Base.push!(t::Traces; kw...) = push!(t, values(kw))
 
@@ -70,3 +78,11 @@ end
 Base.pop!(t::Traces) = map(pop!, t.traces)
 Base.popfirst!(t::Traces) = map(popfirst!, t.traces)
 Base.empty!(t::Traces) = map(empty!, t.traces)
+
+##
+function Random.rand(s::BatchSampler, t::Traces)
+    inds = rand(s.rng, 1:length(t), s.batch_size)
+    map(t.traces) do x
+        x[inds]
+    end
+end

@@ -1,5 +1,8 @@
 using CircularArrayBuffers
 
+const SA = (:state, :action)
+const SLA = (:state, :legal_actions_mask, :action)
+const RT = (:reward, :terminal)
 const SART = (:state, :action, :reward, :terminal)
 const SARTSA = (:state, :action, :reward, :terminal, :next_state, :next_action)
 const SLART = (:state, :legal_actions_mask, :action, :reward, :terminal)
