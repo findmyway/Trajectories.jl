@@ -76,6 +76,7 @@ end
 
 struct AsyncTrajectory
     trajectory
+    sampler
     rate_limiter
     channel_in
     channel_out
@@ -83,29 +84,34 @@ struct AsyncTrajectory
     n_update_ref
     n_sample_ref
 
-    function AsyncTrajectory(trajectory, rate_limiter; channel_in=Channel(1), channel_out=Channel(1))
+    function AsyncTrajectory(trajectory, sampler, rate_limiter; channel_in=Channel(1), channel_out=Channel(1))
         n_update_ref = Ref(0)
         n_sample_ref = Ref(0)
         task = @async while true
-            decision = rate_limiter(n_update, n_sample, isready(channel_in), Base.n_avail(channel_out) < channel_out_size)
+            decision = rate_limiter(n_update, n_sample, isready(channel_in), Base.n_avail(channel_out) < length(channel_out.data))
             if decision === UPDATE
                 msg = take!(channel_in)
                 if msg.f === Base.push!
+                    n_pre = length(trajectory)
                     push!(trajectory, msg.args...; msg.kw...)
-                    n_update_ref[] += 1
+                    n_post = length(trajectory)
+                    n_update_ref[] += n_post - n_pre
                 elseif msg.f === Base.append!
+                    n_pre = length(trajectory)
                     append!(trajectory, msg.args...; msg.kw...)
-                    n_update_ref[] += length(msg.data)
+                    n_post = length(trajectory)
+                    n_update_ref[] += n_post - n_pre
                 else
                     msg.f(trajectory, msg.args...; msg.kw...)
                 end
             elseif decision === SAMPLE
-                put!(channel_out, rand(trajectory))
+                put!(channel_out, rand(sampler, trajectory))
                 n_sample_ref[] += 1
             end
         end
         new(
             trajectory,
+            sampler,
             channel_in,
             channel_out,
             task,

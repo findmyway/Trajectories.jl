@@ -3,6 +3,7 @@ export Trajectory
 Base.@kwdef struct Trajectory{T,S}
     traces::T
     sampler::S
+    rate_limiter::RateLimiter
 end
 
 Base.rand(t::Trajectory) = rand(t.sampler, t.traces)
