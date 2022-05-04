@@ -56,9 +56,8 @@ struct Episodes
     episodes::Vector{Episode}
 end
 
-Base.lastindex(e::Episodes) = lastindex(e.episodes)
-Base.length(e::Episodes) = length(e.episodes)
-Base.getindex(e::Episodes, I...) = getindex(e.episodes, I...)
+# TODO: we may need a range map
+# https://github.com/google/guava/wiki/NewCollectionTypesExplained#rangemap
 
 Base.push!(e::Episodes, x::Episode) = push!(e.episodes, x)
 Base.append!(e::Episodes, x::AbstractVector{<:Episode}) = append!(e.episodes, x)
