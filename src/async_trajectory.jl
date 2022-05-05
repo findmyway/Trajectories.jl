@@ -105,7 +105,7 @@ struct AsyncTrajectory
                     msg.f(trajectory, msg.args...; msg.kw...)
                 end
             elseif decision === SAMPLE
-                put!(channel_out, rand(sampler, trajectory))
+                put!(channel_out, sample(sampler, trajectory))
                 n_sample_ref[] += 1
             end
         end

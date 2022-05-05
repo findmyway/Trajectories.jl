@@ -11,8 +11,13 @@ struct Episode{T}
     is_done::Ref{Bool}
 end
 
+Base.getindex(e::Episode, s::Symbol) = getindex(e.traces, s)
+Base.keys(e::Episode) = keys(e.traces)
+
 Base.getindex(e::Episode) = getindex(e.is_done)
 Base.setindex!(e::Episode, x::Bool) = setindex!(e.is_done, x)
+
+Base.length(e::Episode) = length(e.traces)
 
 Episode(t::Traces) = Episode(t, Ref(false))
 
@@ -54,16 +59,23 @@ A container for multiple [`Episode`](@ref)s. `init` is a parameterness function 
 struct Episodes
     init::Any
     episodes::Vector{Episode}
+    inds::Vector{Tuple{Int,Int}}
 end
 
-# TODO: we may need a range map
-# https://github.com/google/guava/wiki/NewCollectionTypesExplained#rangemap
+Base.length(e::Episodes) = length(e.inds)
 
-Base.push!(e::Episodes, x::Episode) = push!(e.episodes, x)
-Base.append!(e::Episodes, x::AbstractVector{<:Episode}) = append!(e.episodes, x)
-Base.pop!(e::Episodes) = pop!(e.episodes)
-Base.popfirst!(e::Episodes) = popfirst!(e.episodes)
-Base.empty!(e::Episodes) = empty!(e.episodes)
+function Base.push!(e::Episodes, x::Episode)
+    push!(e.episodes, x)
+    for i in 1:length(x)
+        push!(e.inds, (length(e.episodes), i))
+    end
+end
+
+function Base.append!(e::Episodes, xs::AbstractVector{<:Episode})
+    for x in xs
+        push!(e, x)
+    end
+end
 
 function Base.push!(e::Episodes, x)
     if isempty(e.episodes) || e.episodes[end][]
@@ -72,5 +84,22 @@ function Base.push!(e::Episodes, x)
         push!(e.episodes, episode)
     else
         push!(e.episodes[end], x)
+        push!(e.inds, (length(e.episodes), length(e.episodes[end])))
     end
+end
+
+function Base.append!(e::Episodes, x)
+    n_pre = length(e.episodes[end])
+    append!(e.episodes[end], x)
+    n_post = length(e.episodes[end])
+    for i in n_pre:n_post
+        push!(e.inds, (lengthe.episodes, i))
+    end
+end
+
+##
+
+function sample(s::BatchSampler, e::Episodes)
+    inds = rand(s.rng, 1:length(t), s.batch_size)
+    # TODO: batch
 end

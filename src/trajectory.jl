@@ -44,7 +44,7 @@ function Base.take!(t::Trajectory)
     if isnothing(res)
         nothing
     else
-        rand(t.sampler, t.container)
+        sample(t.sampler, t.container)
     end
 end
 

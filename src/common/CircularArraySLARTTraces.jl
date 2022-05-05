@@ -35,7 +35,7 @@ function CircularArraySLARTTraces(;
     )
 end
 
-function Random.rand(s::BatchSampler, t::CircularArraySLARTTraces)
+function sample(s::BatchSampler, t::CircularArraySLARTTraces)
     inds = rand(s.rng, 1:length(t), s.batch_size)
     inds′ = inds .+ 1
     (

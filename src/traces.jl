@@ -1,4 +1,4 @@
-export Trace, Traces
+export Trace, Traces, sample
 
 """
     Trace(data)
@@ -34,7 +34,7 @@ Base.empty!(t::Trace) = empty!(t.x)
 
 ##
 
-function Random.rand(s::BatchSampler, t::Trace)
+function sample(s::BatchSampler, t::Trace)
     inds = rand(s.rng, 1:length(t), s.batch_size)
     t[inds]
 end
@@ -80,7 +80,7 @@ Base.popfirst!(t::Traces) = map(popfirst!, t.traces)
 Base.empty!(t::Traces) = map(empty!, t.traces)
 
 ##
-function Random.rand(s::BatchSampler, t::Traces)
+function sample(s::BatchSampler, t::Traces)
     inds = rand(s.rng, 1:length(t), s.batch_size)
     map(t.traces) do x
         x[inds]
