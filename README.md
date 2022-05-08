@@ -6,54 +6,22 @@
 
 ## Design
 
-```
-      ┌────────────────────────────┐
-      │(state=..., action=..., ...)│
-      └──────────────┬─────────────┘
-              push!  │  append!
- ┌───────────────────▼───────────────────┐
- │ Trajectory                            │
- │  ┌─────────────────────────────────┐  │
- │  │ Traces                          │  │
- │  │          ┌───────────────────┐  │  │
- │  │   state: │CircularArrayBuffer│  │  │
- │  │          └───────────────────┘  │  │
- │  │          ┌───────────────────┐  │  │
- │  │   action:│CircularArrayBuffer│  │  │
- │  │          └───────────────────┘  │  │
- │  │   ......                        │  │
- │  └─────────────────────────────────┘  │
- |    Sampler                            |
- └───────────────────┬───────────────────┘
-                     │ batch sampling
-      ┌──────────────▼─────────────┐
-      │(state=..., action=..., ...)│
-      └────────────────────────────┘
+A typical example of `Trajectory`:
+
+![](https://user-images.githubusercontent.com/5612003/167291629-0e2d4f0f-7c54-460c-a94f-9eb4148cdca0.png)
+
+Exported APIs are:
+
+```julia
+push!(trajectory; [trace_name=value]...)
+append!(trajectory; [trace_name=value]...)
+
+for sample in trajectory
+    # consume samples from the trajectory
+end
 ```
 
-```
- ┌──────────────┐    ┌──────────────┐
- │Single Element│    │Batch Elements│
- └──────┬───────┘    └──────┬───────┘
-        │                   │
-  push! └──────┐    ┌───────┘ append!
-               │    │
- ┌─────────────┼────┼─────────────────────────────┐
- │          ┌──▼────▼──┐     AsyncTrajectory      │
- │          │Channel In│                          │
- │          └─────┬────┘                          │
- │          take! │                               │
- │          ┌─────▼─────┐   push!  ┌────────────┐ │
- │          │RateLimiter├──────────► Trajectory │ │
- │          └─────┬─────┘  append! └────*───────┘ │
- │                │                     *         │
- │           put! │**********************         │
- │                │     batch sampling            │
- │          ┌─────▼─────┐                         │
- │          │Channel Out│                         │
- │          └───────────┘                         │
- └────────────────────────────────────────────────┘
-```
+A wide variety of `container`s, `sampler`s, and `controler`s are provided. For the full list, please read the doc.
 
 ## Acknowledgement
 

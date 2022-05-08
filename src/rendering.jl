@@ -2,7 +2,7 @@ using Term
 
 const TRACE_COLORS = ("bright_green", "hot_pink", "bright_blue", "light_coral", "bright_cyan", "sandy_brown", "violet")
 
-Base.show(io::IO, ::MIME"text/plain", t::Union{Trace,Traces,Episode,Episodes}) = tprint(io, convert(Term.AbstractRenderable, t; width=displaysize(io)[2]) |> string)
+Base.show(io::IO, ::MIME"text/plain", t::Union{Trace,Traces,Episode,Episodes,Trajectory}) = tprint(io, convert(Term.AbstractRenderable, t; width=displaysize(io)[2]) |> string)
 
 inner_convert(::Type{Term.AbstractRenderable}, s::String; style="gray1", width=88) = Panel(s, width=width, style=style, justify=:center)
 inner_convert(t::Type{Term.AbstractRenderable}, x::Union{Symbol,Number}; kw...) = inner_convert(t, string(x); kw...)
@@ -63,7 +63,8 @@ function Base.convert(::Type{Term.AbstractRenderable}, t::Traces; width=88)
         style="yellow3",
         subtitle="$N traces in total",
         subtitle_justify=:right,
-        width=width
+        width=width,
+        fit=true
     )
 end
 
@@ -74,7 +75,8 @@ function Base.convert(::Type{Term.AbstractRenderable}, e::Episode; width=88)
         style="green_yellow",
         subtitle=e[] ? "Episode END" : "Episode growing...",
         subtitle_justify=:right,
-        width=width
+        width=width,
+        fit=true
     )
 end
 
@@ -99,6 +101,35 @@ function Base.convert(::Type{Term.AbstractRenderable}, e::Episodes; width=88)
         subtitle="$n episodes in total",
         subtitle_justify=:right,
         width=width,
+        fit=true,
         style="wheat1"
     )
 end
+
+function Base.convert(r::Type{Term.AbstractRenderable}, t::Trajectory; width=88)
+    Panel(
+        convert(r, t.container; width=width - 8) /
+        Panel(convert(Term.Tree, t.sampler); title="sampler", style="yellow3", fit=true, width=width - 8) /
+        Panel(convert(Term.Tree, t.controler); title="controler", style="yellow3", fit=true, width=width - 8);
+        title="Trajectory",
+        style="yellow3",
+        width=width,
+        fit=true
+    )
+end
+
+# general converter
+
+Base.convert(::Type{Term.Tree}, x) = Tree(to_tree_body(x); title=to_tree_title(x))
+Base.convert(::Type{Term.Tree}, x::Tree) = x
+
+function to_tree_body(x)
+    pts = propertynames(x)
+    if length(pts) > 0
+        Dict("$p => $(summary(getproperty(x, p)))" => to_tree_body(getproperty(x, p)) for p in pts)
+    else
+        x
+    end
+end
+
+to_tree_title(x) = "$(summary(x))"

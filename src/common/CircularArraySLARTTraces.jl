@@ -35,7 +35,7 @@ function CircularArraySLARTTraces(;
     )
 end
 
-function Random.rand(s::BatchSampler, t::CircularArraySLARTTraces)
+function sample(s::BatchSampler, t::CircularArraySLARTTraces)
     inds = rand(s.rng, 1:length(t), s.batch_size)
     inds′ = inds .+ 1
     (
@@ -47,5 +47,16 @@ function Random.rand(s::BatchSampler, t::CircularArraySLARTTraces)
         next_state=t[:state][inds′],
         next_legal_actions_mask=t[:legal_actions_mask][inds′],
         next_action=t[:state][inds′]
-    )
+    ) |> s.transformer
+end
+
+function Base.push!(t::CircularArraySLARTTraces, x::NamedTuple{SLA})
+    if length(t[:state]) == length(t[:terminal]) + 1
+        pop!(t[:state])
+        pop!(t[:legal_actions_mask])
+        pop!(t[:action])
+    end
+    push!(t[:state], x[:state])
+    push!(t[:legal_actions_mask], x[:legal_actions_mask])
+    push!(t[:action], x[:action])
 end
