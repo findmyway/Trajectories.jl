@@ -103,5 +103,5 @@ end
 
 function sample(s::BatchSampler, e::Episodes)
     inds = rand(s.rng, 1:length(t), s.batch_size)
-    batch([@view(s.episodes[e.inds[i][1]][e.inds[i][2]]) for i in inds])
+    batch([@view(s.episodes[e.inds[i][1]][e.inds[i][2]]) for i in inds]) |> s.transformer
 end

@@ -47,7 +47,7 @@ function sample(s::BatchSampler, t::CircularArraySLARTTraces)
         next_state=t[:state][inds′],
         next_legal_actions_mask=t[:legal_actions_mask][inds′],
         next_action=t[:state][inds′]
-    )
+    ) |> s.transformer
 end
 
 function Base.push!(t::CircularArraySLARTTraces, x::NamedTuple{SLA})

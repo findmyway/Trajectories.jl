@@ -36,7 +36,7 @@ Base.empty!(t::Trace) = empty!(t.x)
 
 function sample(s::BatchSampler, t::Trace)
     inds = rand(s.rng, 1:length(t), s.batch_size)
-    t[inds]
+    t[inds] |> s.transformer
 end
 
 #####
@@ -84,5 +84,5 @@ function sample(s::BatchSampler, t::Traces)
     inds = rand(s.rng, 1:length(t), s.batch_size)
     map(t.traces) do x
         x[inds]
-    end
+    end |> s.transformer
 end
