@@ -41,5 +41,14 @@ function Random.rand(s::BatchSampler, t::CircularArraySARTTraces)
         terminal=t[:terminal][inds],
         next_state=t[:state][inds′],
         next_action=t[:state][inds′]
-    )
+    ) |> s.transformer
+end
+
+function Base.push!(t::CircularArraySARTTraces, x::NamedTuple{SA})
+    if length(t[:state]) == length(t[:terminal]) + 1
+        pop!(t[:state])
+        pop!(t[:action])
+    end
+    push!(t[:state], x[:state])
+    push!(t[:action], x[:action])
 end

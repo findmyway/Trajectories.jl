@@ -13,8 +13,12 @@
     pop!(t)
     @test length(t) == 2
 
+    s = BatchSampler(2)
+    @test size(sample(s, t)) == (2,)
+
     empty!(t)
     @test length(t) == 0
+
 end
 
 @testset "Trace 2d" begin
@@ -25,6 +29,9 @@ end
     @test length(t) == 3
     @test t[1] == [1, 4]
     @test @view(t[2:3]) == [2 3; 5 6]
+
+    s = BatchSampler(5)
+    @test size(sample(s, t)) == (2, 5)
 end
 
 @testset "Traces" begin
@@ -44,4 +51,7 @@ end
     append!(t; a=[4, 5], b=[false, false])
     @test length(t[:a]) == 5
     @test t[:b][end-1:end] == [false, false]
+
+    s = BatchSampler(5)
+    @test size(sample(s, t)[:a]) == (5,)
 end
