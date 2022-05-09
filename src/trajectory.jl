@@ -61,7 +61,7 @@ TrajectoryStyle(::Trajectory{<:Any,<:Any,<:AsyncInsertSampleRatioControler}) = A
 
 Base.bind(::Trajectory, ::Task) = nothing
 
-function Base.bind(t::Trajectory{<:Any,<:Any,<:AsyncInsertSampleRatioControler}, tassk)
+function Base.bind(t::Trajectory{<:Any,<:Any,<:AsyncInsertSampleRatioControler}, task)
     bind(t.controler.ch_in, task)
     bind(t.controler.ch_out, task)
 end
