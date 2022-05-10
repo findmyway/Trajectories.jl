@@ -1,4 +1,4 @@
-export Trace, Traces, sample
+export Trace, Traces
 
 """
     Trace(data)
