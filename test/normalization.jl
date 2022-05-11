@@ -3,7 +3,7 @@ using Trajectories
 import Trajectories.normalize!
 import OnlineStats: fit!, mean, std
 
-#@testset "normalization.jl" begin
+@testset "normalization.jl" begin
     #scalar normalization
     rewards = [1.:10;]
     rn = reward_normalizer()
