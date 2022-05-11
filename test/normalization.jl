@@ -28,7 +28,7 @@ import OnlineStats: fit!, mean, std
     batch_states = collect(states)
     normalize!(sn, batch_states)
     
-    #NormalizedArray
+    #NormalizedTrajectory
     t = Trajectory(
         container=Traces(
             a=Float64[],
