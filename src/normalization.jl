@@ -34,7 +34,7 @@ end
     reward_normalizer(;weights = OnlineStats.EqualWeight())
 
 Returns preconfigured normalizer for scalar rewards. By default, all rewards have equal weights.
-See the [OnlineStats documentation](https://joshday.github.io/OnlineStats.jl/stable/weights/) to use variants such as exponential weights.
+See the [OnlineStats documentation](https://joshday.github.io/OnlineStats.jl/stable/weights/) to use variants such as exponential weights to favor the most recent observations.
 """
 reward_normalizer(; weight::Weight = EqualWeight()) = Normalizer(Moments(weight = weight))
 
