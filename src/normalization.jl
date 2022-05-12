@@ -98,14 +98,9 @@ end
 """
     normalize!(os::Moments, x)
 
-Given an Moments estimate of x, a scalar trace or a vector of scalar traces,
-normalizes x to zero mean, and unit variance. Works elementwise given a vector. 
+Given an Moments estimate of the elements of x, a vector of scalar traces,
+normalizes x elementwise to zero mean, and unit variance. 
 """
-function normalize!( os::Moments, x::Number)
-    m, s = mean(os), std(os)
-    x -= m
-    x /= s
-end
 
 function normalize!(os::Moments, x::AbstractVector)
     m, s = mean(os), std(os)
