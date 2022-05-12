@@ -3,7 +3,7 @@ using Trajectories
 import Trajectories.normalize!
 import OnlineStats: fit!, mean, std
 
-@testset "normalization.jl" begin
+#@testset "normalization.jl" begin
     #scalar normalization
     rewards = [1.:10;]
     rn = reward_normalizer()
@@ -31,7 +31,7 @@ import OnlineStats: fit!, mean, std
     #NormalizedTrajectory
     t = Trajectory(
         container=Traces(
-            a=Float64[],
+            a=Float32[],
             b=Int[]
         ),
         sampler=BatchSampler(30000),
@@ -43,6 +43,7 @@ import OnlineStats: fit!, mean, std
     @test mean(nt.normalizer[:a]) ≈ 2.
     @test std(nt.normalizer[:a]) ≈ std([1,2,2,3])
     a,b = take!(nt)
+    @test eltype(a) == Float32
     @test mean(a) ≈ 0 atol = 0.01
     @test mean(b) ≈ 2 atol = 0.01 #b is not normalized
 end
