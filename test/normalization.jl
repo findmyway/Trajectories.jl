@@ -11,8 +11,6 @@ import OnlineStats: fit!, mean, std
     batch_reward = [6.,5.,10.]
     output = normalize!(rn, batch_reward)
     @test batch_reward == output != [6.,5.,10.]
-    one_reward = mean(rn)
-    @test normalize!(rn, one_reward) == 0.
     #vector normalization
     states = reshape([1:50;], 5, 10)
     sn = state_normalizer((5,))
