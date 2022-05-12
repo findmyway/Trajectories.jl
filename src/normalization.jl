@@ -66,7 +66,7 @@ Predefined constructors are provide for scalar rewards (see [`reward_normalizer`
 NormalizedTrajectory(
     my_trajectory,
     :state => state_normalizer((5,5)),
-    :reward => reward_normalizer(weight = OnlineStats.ExponentialWeight)
+    :reward => reward_normalizer(weight = OnlineStats.ExponentialWeight(0.9))
 )
 
 """
