@@ -11,7 +11,7 @@ struct Normalizer{OS<:OnlineStat}
     os::OS
 end
 
-MacroTools.@forward Normalizer.os OnlineStats.mean, OnlineStats.std, Base.iterate, normalize!
+MacroTools.@forward Normalizer.os OnlineStats.mean, OnlineStats.std, Base.iterate, normalize!, Base.length
 
 function OnlineStats.fit!(n::Normalizer, y)
     for yi in y
