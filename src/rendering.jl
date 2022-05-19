@@ -19,7 +19,7 @@ function inner_convert(::Type{Term.AbstractRenderable}, x; style="gray1", width=
 end
 
 Base.convert(T::Type{Term.AbstractRenderable}, t::Trace{<:AbstractArray}; kw...) = convert(T, Trace(collect(eachslice(t.x, dims=ndims(t.x)))); kw..., type=typeof(t), subtitle="size: $(size(t.x))")
-
+Base.convert(T::Type{Term.AbstractRenderable}, t::NormalizedTrace; kw...) = convert(T, t.trace; kw..., type = typeof(t))
 function Base.convert(
     ::Type{Term.AbstractRenderable},
     t::Trace{<:AbstractVector};
