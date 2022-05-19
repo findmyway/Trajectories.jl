@@ -30,7 +30,7 @@ import OnlineStats: fit!, mean, std
             b=Int[],
             c=NormalizedTrace(Vector{Float32}[], array_normalizer((10,))) #TODO check with ElasticArrays and Episodes
         ),
-        sampler=BatchSampler(30000),
+        sampler=BatchSampler(300000),
         controler=InsertSampleRatioControler(Inf, 0)
     )
     append!(t, a = [1,2,3], b = [1,2,3], c = eachcol(reshape(1f0:30, 10,3)))
