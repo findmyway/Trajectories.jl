@@ -150,11 +150,11 @@ function normalize(os::Group{<:AbstractVector{<:Moments}}, x::AbstractVector{<:A
 end
 
 function fetch(nt::NormalizedTrace, inds)
-    batch = deepcopy(fetch(nt.trace, inds))
+    batch = fetch(nt.trace, inds)
     normalize(nt.normalizer.os, batch)
 end
 
 function sample(s, nt::NormalizedTrace)
-    batch = deepcopy(sample(s, nt.trace))
+    batch = sample(s, nt.trace)
     normalize(nt.normalizer.os, batch)
 end
