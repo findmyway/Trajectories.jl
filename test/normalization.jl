@@ -8,23 +8,20 @@ import OnlineStats: fit!, mean, std
     rewards = [1.:10;]
     rn = scalar_normalizer()
     fit!(rn, rewards)
-    batch_reward = [6.,5.,10.]
-    output = normalize!(rn, batch_reward)
-    @test batch_reward == output != [6.,5.,10.]
+    batch_reward = normalize(rn, [6.,5.,10.])
+    @test batch_reward ≈ ([6.,5.,10.] .- mean(1:10))./std(1:10)
     #vector normalization
     states = reshape([1:50;], 5, 10)
     sn = array_normalizer((5,))
     fit!(sn, states)
     @test [mean(stat) for stat in sn] == [mean((1:5:46) .+i) for i in 0:4]
-    batch_states = reshape(repeat(5.:-1:1, 5), 5,5)
-    normalize!(sn, batch_states)
+    batch_states =normalize(sn, reshape(repeat(5.:-1:1, 5), 5,5))
     @test all(length(unique(x)) == 1 for x in eachrow(batch_states))
     #array normalization
     states = reshape(1.:250, 5,5,10)
     sn = array_normalizer((5,5))
     fit!(sn, eachslice(states, dims = 3))
-    batch_states = collect(states)
-    normalize!(sn, batch_states)
+    batch_states = normalize(sn, collect(states))
     
     #NormalizedTrace
     t = Trajectory(
@@ -44,5 +41,6 @@ import OnlineStats: fit!, mean, std
     @test eltype(a) == Float32
     @test mean(a) ≈ 0 atol = 0.01
     @test mean(b) ≈ 2 atol = 0.01 #b is not normalized
+    @test eltype(first(c)) == Float32
     @test all(isapprox(0f0, atol = 0.01), vec(mean(reduce(hcat,c), dims = 2)))
 end

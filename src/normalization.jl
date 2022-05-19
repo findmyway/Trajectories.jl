@@ -115,7 +115,8 @@ Given an Moments estimate of the elements of x, a vector of scalar traces,
 normalizes x elementwise to zero mean, and unit variance. 
 """
 function normalize(os::Moments, x::AbstractVector)
-    m, s = mean(os), std(os)
+    T = eltype(x)
+    m, s = T(mean(os)), T(std(os))
     return (x .- m) ./ s
 end
 
@@ -126,15 +127,16 @@ Given an os::Group{<:Tuple{Moments}}, that is, a multivariate estimator of the m
 normalizes each element of x to zero mean, and unit variance. Treats the last dimension as a batch dimension if `ndims(x) >= 2`.
 """
 function normalize(os::Group{<:AbstractVector{<:Moments}}, x::AbstractVector)
-    m = [mean(stat) for stat in os]
-    s = [std(stat) for stat in os]
+    T = eltype(x)
+    m = [T(mean(stat)) for stat in os]
+    s = [T(std(stat)) for stat in os]
     return (x .- m) ./ s
 end
 
 function normalize(os::Group{<:AbstractVector{<:Moments}}, x::AbstractArray) 
     xn = similar(x)
     for (i, slice) in enumerate(eachslice(x, dims = ndims(x)))
-        xn[repeat(:, ndims(x)-1)..., i] .= reshape(normalize(os, vec(slice)), size(x)[1:end-1]...) 
+        xn[repeat([:], ndims(x)-1)..., i] .= reshape(normalize(os, vec(slice)), size(x)[1:end-1]...) 
     end
     return xn
 end
