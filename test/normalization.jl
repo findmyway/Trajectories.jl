@@ -20,7 +20,7 @@ import OnlineStats: fit!, mean, std
     #array normalization
     states = reshape(1.:250, 5,5,10)
     sn = array_normalizer((5,5))
-    fit!(sn, eachslice(states, dims = 3))
+    fit!(sn, states)
     batch_states = normalize(sn, collect(states))
     
     #NormalizedTrace
