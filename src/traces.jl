@@ -32,6 +32,8 @@ Base.pop!(t::Trace) = pop!(t.x)
 Base.popfirst!(t::Trace) = popfirst!(t.x)
 Base.empty!(t::Trace) = empty!(t.x)
 
+fetch(t::Trace, inds) = t[inds]
+
 ##
 
 function sample(s::BatchSampler, t::Trace)
@@ -83,6 +85,6 @@ Base.empty!(t::Traces) = map(empty!, t.traces)
 function sample(s::BatchSampler, t::Traces)
     inds = rand(s.rng, 1:length(t), s.batch_size)
     map(t.traces) do x
-        x[inds]
+        fetch(x, inds)
     end |> s.transformer
 end
