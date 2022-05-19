@@ -1,6 +1,6 @@
 import OnlineStats: OnlineStats, Group, Moments, fit!, OnlineStat, Weight, EqualWeight, mean, std
-export state_normalizer, reward_normalizer, NormalizedTrajectory, Normalizer
-using MacroTools
+export scalar_normalizer, array_normalizer, NormalizedTrace, Normalizer
+import MacroTools.@forward
 
 """
     Normalizer(::OnlineStat)
@@ -11,17 +11,34 @@ struct Normalizer{OS<:OnlineStat}
     os::OS
 end
 
-MacroTools.@forward Normalizer.os OnlineStats.mean, OnlineStats.std, Base.iterate, normalize!, Base.length
+@forward Normalizer.os OnlineStats.mean, OnlineStats.std, Base.iterate, normalize, Base.length
 
-function OnlineStats.fit!(n::Normalizer, y)
-    for yi in y
-        fit!(n, yi)
+
+
+#Treats last dim as batch dim
+function OnlineStats.fit!(n::Normalizer, data::AbstractArray)
+    for d in eachslice(data, dims = ndims(data))
+        fit!(n.os, vec(d))
     end
     n
 end
 
-function OnlineStats.fit!(n::Normalizer, data::AbstractArray)
-    fit!(n.os, vec(data))
+function OnlineStats.fit!(n::Normalizer{<:Group}, y::AbstractVector)
+    fit!(n.os, y)
+    n
+end
+
+function OnlineStats.fit!(n::Normalizer, y)
+    for yi in y
+        fit!(n.os, vec(yi))
+    end
+    n
+end
+
+function OnlineStats.fit!(n::Normalizer{<:Moments}, y::AbstractVector{<:Number})
+    for yi in y
+        fit!(n.os, yi)
+    end
     n
 end
 
@@ -31,68 +48,64 @@ function OnlineStats.fit!(n::Normalizer, data::Number)
 end
 
 """
-    reward_normalizer(;weights = OnlineStats.EqualWeight())
+    scalar_normalizer(;weights = OnlineStats.EqualWeight())
 
-Returns preconfigured normalizer for scalar rewards. By default, all rewards have equal weights.
+Returns preconfigured normalizer for scalar traces such as rewards. By default, all samples have equal weights in the computation of the moments.
 See the [OnlineStats documentation](https://joshday.github.io/OnlineStats.jl/stable/weights/) to use variants such as exponential weights to favor the most recent observations.
 """
-reward_normalizer(; weight::Weight = EqualWeight()) = Normalizer(Moments(weight = weight))
+scalar_normalizer(; weight::Weight = EqualWeight()) = Normalizer(Moments(weight = weight))
 
 """
-    state_normalizer([state_size::Tuple{Int}]; weights = OnlineStats.EqualWeight())
+    array_normalizer(size::Tuple{Int}; weights = OnlineStats.EqualWeight())
 
-Returns preconfigured normalizer for scalar or array states. 
-For Array states, state_size is a tuple containing the dimension sizes of a state. E.g. `(10,)` for a 10-elements vector, or `(252,252)` for a square image.
-For scalar states, do not provide a state_size information.
-By default, all states have equal weights.
+Returns preconfigured normalizer for array traces such as vector or matrix states. 
+`size` is a tuple containing the dimension sizes of a state. E.g. `(10,)` for a 10-elements vector, or `(252,252)` for a square image.
+By default, all samples have equal weights in the computation of the moments.
 See the [OnlineStats documentation](https://joshday.github.io/OnlineStats.jl/stable/weights/) to use variants such as exponential weights to favor the most recent observations.
 """
-state_normalizer(; weight::Weight = EqualWeight()) = Normalizer(Moments(weight = weight))
-
-state_normalizer(state_size; weight::Weight = EqualWeight()) = Normalizer(Group([Moments(weight = weight) for _ in 1:prod(state_size)]))
+array_normalizer(size::NTuple{N,Int}; weight::Weight = EqualWeight()) where N = Normalizer(Group([Moments(weight = weight) for _ in 1:prod(size)]))
 
 
 """
-    NormalizedTrajectory(trajectory, normalizer::Dict{Symbol, Normalizer})
-    NormalizedTrajectory(trajectory, normalizer::Pair{Symbol, Normalizer}...)
+    NormalizedTrace(trace::Trace, normalizer::Normalizer)
 
-Wraps a `Trajectory` and a [`Normalizer`](@ref). When pushing new elements of `:trace` to trajectory, a `NormalizedTrajectory` will first update `normalizer[:trace]`, an online estimate of the mean and variance of :trace.
-When sampling `:trace` from a normalized trajectory, it will first normalize the samples using `normalizer[:trace]`, if `:trace` is in the keys of `normalizer`, according to its current estimate.
+Wraps a [`Trace`](@ref) and a [`Normalizer`](@ref). When pushing new elements to the trace, a `NormalizedTrace` will first update a running estimate of the moments of that trace.
+When sampling a normalized trace, it will first normalize the samples using to zero mean and unit variance.
 
-Use a `Normalizer(Moments())` estimate for scalar traces, `Normalizer(Group([Moments() for el in trace]))` for Array estimates. 
-Predefined constructors are provide for scalar rewards (see [`reward_normalizer`](@ref)) and states (see [`state_normalizer`](@ref))
+preconfigured normalizers are provided for scalar (see [`scalar_normalizer`](@ref)) and arrays (see [`array_normalizer`](@ref))
 
 #Example
-NormalizedTrajectory(
-    my_trajectory,
-    :state => state_normalizer((5,5)),
-    :reward => reward_normalizer(weight = OnlineStats.ExponentialWeight(0.9))
+t = Trajectory(
+    container=Traces(
+        a_scalar_trace = NormalizedTrace(Float32[], scalar_normalizer()),
+        a_non_normalized_trace=Bool[],
+        a_vector_trace = NormalizedTrace(Vector{Float32}[], array_normalizer((10,))),
+        a_matrix_trace = NormalizedTrace(Matrix{Float32}[], array_normalizer((252,252), weight = OnlineStats.ExponientialWeight(0.9f0)))
+    ),
+    sampler=BatchSampler(3),
+    controler=InsertSampleRatioControler(0.25, 4)
 )
 
 """
-struct NormalizedTrajectory{T, N}
-    trajectory::T
-    normalizer::Dict{Symbol, N}
+struct NormalizedTrace{T <: Trace, N <: Normalizer}
+    trace::T
+    normalizer::N
 end 
 
-NormalizedTrajectory(traj::Trajectory, pairs::Pair{<:Symbol, <:Normalizer}...) = NormalizedTrajectory(traj, Dict(pairs))
+NormalizedTrace(x, normalizer) = NormalizedTrace(convert(Trace, x), normalizer)
 
-function Base.push!(nt::NormalizedTrajectory; x...)
-    for (key, value) in x
-        if key in keys(nt.normalizer)
-            fit!(nt.normalizer[key], value)
-        end
-    end
-    push!(nt.trajectory; x...)
+@forward NormalizedTrace.trace Base.length, Base.lastindex, Base.firstindex, Base.getindex, Base.view, Base.pop!, Base.popfirst!, Base.empty!
+
+Base.convert(::Type{Trace}, x::NormalizedTrace) = x #ignore conversion to Trace
+
+function Base.push!(nt::NormalizedTrace, x)
+    fit!(nt.normalizer, x)
+    push!(nt.trace, x)
 end
 
-function Base.append!(nt::NormalizedTrajectory; x...)
-    for (key, value) in x
-        if key in keys(nt.normalizer)
-            fit!(nt.normalizer[key], value)
-        end
-    end
-    append!(nt.trajectory; x...)
+function Base.append!(nt::NormalizedTrace, x)
+    fit!(nt.normalizer, x)
+    append!(nt.trace, x)
 end
 
 """
@@ -101,13 +114,10 @@ end
 Given an Moments estimate of the elements of x, a vector of scalar traces,
 normalizes x elementwise to zero mean, and unit variance. 
 """
-
-function normalize!(os::Moments, x::AbstractVector)
+function normalize(os::Moments, x::AbstractVector)
     m, s = mean(os), std(os)
-    x .-= m
-    x ./= s
+    return (x .- m) ./ s
 end
-
 
 """
     normalize!(os::Group{<:AbstractVector{<:Moments}}, x)
@@ -115,27 +125,34 @@ end
 Given an os::Group{<:Tuple{Moments}}, that is, a multivariate estimator of the moments of each element of x,
 normalizes each element of x to zero mean, and unit variance. Treats the last dimension as a batch dimension if `ndims(x) >= 2`.
 """
-function normalize!(os::Group{<:AbstractVector{<:Moments}}, x::AbstractVector)
+function normalize(os::Group{<:AbstractVector{<:Moments}}, x::AbstractVector)
     m = [mean(stat) for stat in os]
     s = [std(stat) for stat in os]
-    x .-= m
-    x ./= s
+    return (x .- m) ./ s
 end
 
-function normalize!(os::Group{<:AbstractVector{<:Moments}}, x::AbstractArray)
-    for slice in eachslice(x, dims = ndims(x))
-        normalize!(os, vec(slice))
+function normalize(os::Group{<:AbstractVector{<:Moments}}, x::AbstractArray) 
+    xn = similar(x)
+    for (i, slice) in enumerate(eachslice(x, dims = ndims(x)))
+        xn[repeat(:, ndims(x)-1)..., i] .= reshape(normalize(os, vec(slice)), size(x)[1:end-1]...) 
     end
+    return xn
 end
 
-function Base.take!(nt::NormalizedTrajectory)
-    x = take!(nt.trajectory)
-    if isnothing(x)
-        x
-    else
-        for key in keys(nt.normalizer)
-            normalize!(nt.normalizer[key], x[key])
-        end
+function normalize(os::Group{<:AbstractVector{<:Moments}}, x::AbstractVector{<:AbstractArray})
+    xn = similar(x)
+    for (i,el) in enumerate(x)
+        xn[i] = normalize(os, vec(el))
     end
-    x
+    return xn
+end
+
+function fetch(nt::NormalizedTrace, inds)
+    batch = deepcopy(fetch(nt.trace, inds))
+    normalize(nt.normalizer.os, batch)
+end
+
+function sample(s, nt::NormalizedTrace)
+    batch = deepcopy(sample(s, nt.trace))
+    normalize(nt.normalizer.os, batch)
 end
