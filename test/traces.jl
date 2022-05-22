@@ -1,57 +1,119 @@
-@testset "Trace 1d" begin
-    t = Trace([])
-    @test length(t) == 0
-
-    push!(t, 1)
-    @test length(t) == 1
-    @test t[1] == 1
-
-    append!(t, [2, 3])
-    @test length(t) == 3
-    @test @view(t[2:3]) == [2, 3]
-
-    pop!(t)
-    @test length(t) == 2
-
-    s = BatchSampler(2)
-    @test size(sample(s, t)) == (2,)
-
-    empty!(t)
-    @test length(t) == 0
-
-end
-
-@testset "Trace 2d" begin
-    t = Trace([
-        1 2 3
-        4 5 6
-    ])
-    @test length(t) == 3
-    @test t[1] == [1, 4]
-    @test @view(t[2:3]) == [2 3; 5 6]
-
-    s = BatchSampler(5)
-    @test size(sample(s, t)) == (2, 5)
-end
-
 @testset "Traces" begin
     t = Traces(;
         a=[1, 2],
         b=Bool[0, 1]
     )
 
-    @test keys(t) == (:a, :b)
-    @test haskey(t, :a)
-    @test t[:a] isa Trace
+    @test length(t) == 2
 
-    push!(t; a=3, b=true)
+    push!(t, (; a=3, b=true))
+
     @test t[:a][end] == 3
     @test t[:b][end] == true
 
-    append!(t; a=[4, 5], b=[false, false])
+    append!(t, (a=[4, 5], b=[false, false]))
     @test length(t[:a]) == 5
     @test t[:b][end-1:end] == [false, false]
 
-    s = BatchSampler(5)
-    @test size(sample(s, t)[:a]) == (5,)
+    @test t[1] == (a=1, b=false)
+
+    t_12 = t[1:2]
+    @test t_12.a == [1, 2]
+    @test t_12.b == [false, true]
+
+    t_12.a[1] = 0
+    @test t[:a][1] != 0
+
+    t_12_view = @view t[1:2]
+    t_12_view.a[1] = 0
+    @test t[:a][1] == 0
+
+    pop!(t)
+    @test length(t) == 4
+
+    popfirst!(t)
+    @test length(t) == 3
+
+    empty!(t)
+    @test length(t) == 0
+end
+
+@testset "MultiplexTraces" begin
+    t = MultiplexTraces{(:state, :next_state)}(Int[])
+
+    @test length(t) == 0
+
+    push!(t, (; state=1))
+    push!(t, (; next_state=2))
+
+    @test t[:state] == [1]
+    @test t[:next_state] == [2]
+    @test t[1] == (state=1, next_state=2)
+
+    append!(t, (; state=[3, 4]))
+
+    @test t[:state] == [1, 2, 3]
+    @test t[:next_state] == [2, 3, 4]
+    @test t[end] == (state=3, next_state=4)
+
+    pop!(t)
+    t[end] == (state=2, next_state=3)
+    empty!(t)
+    @test length(t) == 0
+end
+
+@testset "MergedTraces" begin
+    t1 = Traces(a=Int[])
+    t2 = Traces(b=Bool[])
+
+    t3 = t1 + t2
+    @test t3[:a] === t1[:a]
+    @test t3[:b] === t2[:b]
+
+    push!(t3, (; a=1, b=false))
+    @test length(t3) == 1
+    @test t3[1] == (a=1, b=false)
+
+    append!(t3, (; a=[2, 3], b=[false, true]))
+    @test length(t3) == 3
+
+    @test t3[:a][1:3] == [1, 2, 3]
+
+    t3_view = @view t3[1:3]
+    t3_view.a[1] = 0
+    @test t3[:a][1] == 0
+
+    pop!(t3)
+    @test length(t3) == 2
+
+    empty!(t3)
+    @test length(t3) == 0
+
+    t4 = MultiplexTraces{(:m, :n)}(Float64[])
+    t5 = t4 + t2 + t1
+
+    push!(t5, (m=1.0, n=1.0, a=1, b=1))
+    @test length(t5) == 1
+
+    push!(t5, (m=2.0, a=2, b=0))
+
+    @test t5[end] == (m=1.0, n=2.0, b=false, a=2)
+
+    t6 = Traces(aa=Int[])
+    t7 = Traces(bb=Bool[])
+    t8 = (t1 + t2) + (t6 + t7)
+
+    empty!(t8)
+    push!(t8, (a=1, b=false, aa=1, bb=false))
+    append!(t8, (a=[2, 3], b=[true, true], aa=[2, 3], bb=[true, true]))
+
+    @test length(t8) == 3
+
+    t8_view = @view t8[2:3]
+    t8_view.a[1] = 0
+    @test t8[:a][2] == 0
+
+    t8_slice = t8[2:3]
+    t8_slice.a[1] = -1
+    @test t8[:a][2] != -1
 end

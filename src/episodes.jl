@@ -1,6 +1,5 @@
 export Episode, Episodes
 
-using MLUtils: batch
 
 """
     Episode(traces)
@@ -8,34 +7,26 @@ using MLUtils: batch
 An `Episode` is a wrapper around [`Traces`](@ref). You can use `(e::Episode)[]`
 to check/update whether the episode reaches a terminal or not.
 """
-struct Episode{T}
+struct Episode{T,E} <: AbstractVector{E}
     traces::T
-    is_done::Ref{Bool}
+    is_terminated::Ref{Bool}
 end
 
-Base.getindex(e::Episode, s::Symbol) = getindex(e.traces, s)
-Base.keys(e::Episode) = keys(e.traces)
-
+Base.getindex(e::Episode, I) = getindex(e.traces, I)
 Base.getindex(e::Episode) = getindex(e.is_done)
 Base.setindex!(e::Episode, x::Bool) = setindex!(e.is_done, x)
 
-Base.length(e::Episode) = length(e.traces)
+Base.size(e::Episode) = size(e.traces)
 
-Episode(t::Traces) = Episode(t, Ref(false))
+Episode(t::T) where {T<:AbstractTraces} = Episode{T,eltype(t)}(t, Ref(false))
 
-function Base.push!(t::Episode, x)
-    if t.is_done[]
-        throw(ArgumentError("The episode is already flagged as done!"))
-    else
-        push!(t.traces, x)
-    end
-end
-
-function Base.append!(t::Episode, x)
-    if t.is_done[]
-        throw(ArgumentError("The episode is already flagged as done!"))
-    else
-        append!(t.traces, x)
+for f in (:push!, :pushfirst!, :append!, :prepend!)
+    @eval function Base.$f(t::Episode, x)
+        if t.is_done[]
+            throw(ArgumentError("The episode is already flagged as done!"))
+        else
+            $f(t.traces, x)
+        end
     end
 end
 
@@ -58,13 +49,14 @@ end
 
 A container for multiple [`Episode`](@ref)s. `init` is a parameterness function which return an [`Episode`](@ref).
 """
-struct Episodes
+struct Episodes <: AbstractVector{Episode}
     init::Any
     episodes::Vector{Episode}
     inds::Vector{Tuple{Int,Int}}
 end
 
-Base.length(e::Episodes) = length(e.inds)
+Base.size(e::Episodes) = size(e.inds)
+Base.getindex(e::Episodes, I) = getindex(e.episodes, I)
 
 function Base.push!(e::Episodes, x::Episode)
     push!(e.episodes, x)
@@ -100,8 +92,3 @@ function Base.append!(e::Episodes, x)
 end
 
 ##
-
-function sample(s::BatchSampler, e::Episodes)
-    inds = rand(s.rng, 1:length(t), s.batch_size)
-    batch([@view(s.episodes[e.inds[i][1]][e.inds[i][2]]) for i in inds]) |> s.transformer
-end

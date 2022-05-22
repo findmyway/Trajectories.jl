@@ -1,11 +1,12 @@
 module Trajectories
 
-include("samplers.jl")
-include("controlers.jl")
+include("LastDimSlices.jl")
 include("traces.jl")
 include("episodes.jl")
+include("samplers.jl")
+include("controlers.jl")
 include("trajectory.jl")
-include("rendering.jl")
+# include("rendering.jl")
 include("common/common.jl")
 
 end

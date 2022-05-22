@@ -1,17 +1,5 @@
 export CircularArraySLARTTraces
 
-const CircularArraySLARTTraces = Traces{
-    SLART,
-    <:Tuple{
-        <:Trace{<:CircularArrayBuffer},
-        <:Trace{<:CircularArrayBuffer},
-        <:Trace{<:CircularArrayBuffer},
-        <:Trace{<:CircularArrayBuffer},
-        <:Trace{<:CircularArrayBuffer}
-    }
-}
-
-
 function CircularArraySLARTTraces(;
     capacity::Int,
     state=Int => (),
@@ -26,37 +14,11 @@ function CircularArraySLARTTraces(;
     reward_eltype, reward_size = reward
     terminal_eltype, terminal_size = terminal
 
+    MultiplexTraces{(:state, :next_state)}(CircularArrayBuffer{state_eltype}(state_size..., capacity + 1)) +
+    MultiplexTraces{(:legal_actions_mask, :next_legal_actions_mask)}(CircularArrayBuffer{legal_actions_mask_eltype}(legal_actions_mask_size..., capacity + 1)) +
+    MultiplexTraces{(:action, :next_action)}(CircularArrayBuffer{action_eltype}(action_size..., capacity + 1)) +
     Traces(
-        state=CircularArrayBuffer{state_eltype}(state_size..., capacity + 1),  # !!! state is one step longer
-        legal_actions_mask=CircularArrayBuffer{legal_actions_mask_eltype}(legal_actions_mask_size..., capacity + 1),  # !!! legal_actions_mask is one step longer
-        action=CircularArrayBuffer{action_eltype}(action_size..., capacity + 1),  # !!! action is one step longer
         reward=CircularArrayBuffer{reward_eltype}(reward_size..., capacity),
         terminal=CircularArrayBuffer{terminal_eltype}(terminal_size..., capacity),
     )
-end
-
-function sample(s::BatchSampler, t::CircularArraySLARTTraces)
-    inds = rand(s.rng, 1:length(t), s.batch_size)
-    inds′ = inds .+ 1
-    (
-        state=t[:state][inds],
-        legal_actions_mask=t[:legal_actions_mask][inds],
-        action=t[:action][inds],
-        reward=t[:reward][inds],
-        terminal=t[:terminal][inds],
-        next_state=t[:state][inds′],
-        next_legal_actions_mask=t[:legal_actions_mask][inds′],
-        next_action=t[:state][inds′]
-    ) |> s.transformer
-end
-
-function Base.push!(t::CircularArraySLARTTraces, x::NamedTuple{SLA})
-    if length(t[:state]) == length(t[:terminal]) + 1
-        pop!(t[:state])
-        pop!(t[:legal_actions_mask])
-        pop!(t[:action])
-    end
-    push!(t[:state], x[:state])
-    push!(t[:legal_actions_mask], x[:legal_actions_mask])
-    push!(t[:action], x[:action])
 end

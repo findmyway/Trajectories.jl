@@ -54,8 +54,6 @@ Base.@kwdef struct Trajectory{C,S,T}
 end
 
 
-Base.push!(t::Trajectory; kw...) = push!(t, values(kw))
-
 function Base.push!(t::Trajectory, x)
     n_pre = length(t.container)
     push!(t.container, x)
@@ -71,8 +69,6 @@ end
 
 Base.push!(t::Trajectory{<:Any,<:Any,<:AsyncInsertSampleRatioControler}, args...; kw...) = put!(t.controler.ch_in, CallMsg(Base.push!, args, kw))
 Base.append!(t::Trajectory{<:Any,<:Any,<:AsyncInsertSampleRatioControler}, args...; kw...) = put!(t.controler.ch_in, CallMsg(Base.append!, args, kw))
-
-Base.append!(t::Trajectory; kw...) = append!(t, values(kw))
 
 function Base.append!(t::Trajectory, x)
     n_pre = length(t.container)
