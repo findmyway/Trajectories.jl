@@ -6,7 +6,6 @@ include("episodes.jl")
 include("samplers.jl")
 include("controlers.jl")
 include("trajectory.jl")
-include("rendering.jl")
 include("common/common.jl")
 
 end
