@@ -1,7 +1,9 @@
-export Trajectory
+export Trajectory, TrajectoryStyle, SyncTrajectoryStyle, AsyncTrajectoryStyle
 
 using Base.Threads
 
+struct AsyncTrajectoryStyle end
+struct SyncTrajectoryStyle end
 
 """
     Trajectory(container, sampler, controler)
@@ -53,6 +55,15 @@ Base.@kwdef struct Trajectory{C,S,T}
     end
 end
 
+TrajectoryStyle(::Trajectory) = SyncTrajectoryStyle()
+TrajectoryStyle(::Trajectory{<:Any,<:Any,<:AsyncInsertSampleRatioControler}) = AsyncTrajectoryStyle()
+
+Base.bind(::Trajectory, ::Task) = nothing
+
+function Base.bind(t::Trajectory{<:Any,<:Any,<:AsyncInsertSampleRatioControler}, task)
+    bind(t.controler.ch_in, task)
+    bind(t.controler.ch_out, task)
+end
 
 function Base.push!(t::Trajectory, x)
     n_pre = length(t.container)

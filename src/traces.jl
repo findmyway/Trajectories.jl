@@ -5,12 +5,7 @@ import MacroTools: @forward
 
 abstract type AbstractTraces{names,T} <: AbstractVector{NamedTuple{names,T}} end
 
-# function Base.show(io::IO, ::MIME"text/plain", t::AbstractTraces{names}) where {names}
-#     println(io, "$(length(names)) traces in total with $(length(t)) elements:")
-#     for n in names
-#         println("  :$n => $(summary(t[n]))")
-#     end
-# end
+Base.keys(t::AbstractTraces{names}) where {names} = names
 
 """
     Traces(;kw...)
@@ -18,12 +13,6 @@ abstract type AbstractTraces{names,T} <: AbstractVector{NamedTuple{names,T}} end
 struct Traces{T,names,E} <: AbstractTraces{names,E}
     traces::T
     function Traces(; kw...)
-        for (k, v) in kw
-            if !(v isa AbstractVector)
-                throw(ArgumentError("the value of $k should be an AbstractVector"))
-            end
-        end
-
         data = map(x -> convert(LastDimSlices, x), values(kw))
         t = StructArray(data)
         new{typeof(t),keys(data),Tuple{typeof(data).types...}}(t)

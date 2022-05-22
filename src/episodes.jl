@@ -90,5 +90,3 @@ function Base.append!(e::Episodes, x)
         push!(e.inds, (lengthe.episodes, i))
     end
 end
-
-##
