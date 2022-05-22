@@ -13,8 +13,8 @@ struct Episode{T,E} <: AbstractVector{E}
 end
 
 Base.getindex(e::Episode, I) = getindex(e.traces, I)
-Base.getindex(e::Episode) = getindex(e.is_done)
-Base.setindex!(e::Episode, x::Bool) = setindex!(e.is_done, x)
+Base.getindex(e::Episode) = getindex(e.is_terminated)
+Base.setindex!(e::Episode, x::Bool) = setindex!(e.is_terminated, x)
 
 Base.size(e::Episode) = size(e.traces)
 
@@ -22,7 +22,7 @@ Episode(t::T) where {T<:AbstractTraces} = Episode{T,eltype(t)}(t, Ref(false))
 
 for f in (:push!, :pushfirst!, :append!, :prepend!)
     @eval function Base.$f(t::Episode, x)
-        if t.is_done[]
+        if t.is_terminated[]
             throw(ArgumentError("The episode is already flagged as done!"))
         else
             $f(t.traces, x)
@@ -32,14 +32,14 @@ end
 
 function Base.pop!(t::Episode)
     pop!(t.traces)
-    t.is_done[] = false
+    t.is_terminated[] = false
 end
 
 Base.popfirst!(t::Episode) = popfirst!(t.traces)
 
 function Base.empty!(t::Episode)
     empty!(t.traces)
-    t.is_done[] = false
+    t.is_terminated[] = false
 end
 
 #####
