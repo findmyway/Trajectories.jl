@@ -4,7 +4,11 @@ import MacroTools: @forward
 
 #####
 
-struct Trace{T,E} <: AbstractVector{E}
+abstract type AbstractTrace{E} <: AbstractVector{E} end
+
+Base.convert(::Type{AbstractTrace}, x::AbstractTrace) = x
+
+struct Trace{T,E} <: AbstractTrace{E}
     parent::T
 end
 
@@ -16,7 +20,7 @@ function Trace(x::T) where {T<:AbstractArray}
     Trace{T,SubArray{E,N,P,I,true}}(x)
 end
 
-Base.convert(::Type{Trace}, x::AbstractArray) = Trace(x)
+Base.convert(::Type{AbstractTrace}, x::AbstractArray) = Trace(x)
 
 Base.size(x::Trace) = (size(x.parent, ndims(x.parent)),)
 Base.getindex(s::Trace, I) = Base.maybeview(s.parent, ntuple(i -> i == ndims(s.parent) ? I : (:), Val(ndims(s.parent)))...)
@@ -35,6 +39,14 @@ For each concrete `AbstractTraces`, we have the following assumption:
 """
 abstract type AbstractTraces{names,T} <: AbstractVector{NamedTuple{names,T}} end
 
+function Base.show(io::IO, ::MIME"text/plain", t::AbstractTraces{names,T}) where {names,T}
+    s = nameof(typeof(t))
+    println(io, "$s with $(length(names)) traces:")
+    for n in names
+        println(io, "  :$n => $(summary(t[n]))")
+    end
+end
+
 Base.keys(t::AbstractTraces{names}) where {names} = names
 Base.haskey(t::AbstractTraces{names}, k::Symbol) where {names} = k in names
 
@@ -46,7 +58,7 @@ Base.haskey(t::AbstractTraces{names}, k::Symbol) where {names} = k in names
 struct Traces{T,names,E} <: AbstractTraces{names,E}
     traces::T
     function Traces(; kw...)
-        data = map(x -> convert(Trace, x), values(kw))
+        data = map(x -> convert(AbstractTrace, x), values(kw))
         new{typeof(data),keys(data),Tuple{typeof(data).types...}}(data)
     end
 end
@@ -98,16 +110,16 @@ function MultiplexTraces{names}(t::AbstractVector) where {names}
     if length(names) != 2
         throw(ArgumentError("MultiplexTraces has exactly two sub traces, got $length(names) trace names"))
     end
-    trace = convert(Trace, t)
+    trace = convert(AbstractTrace, t)
     MultiplexTraces{names,typeof(trace),eltype(trace)}(trace)
 end
 
 function Base.getindex(t::MultiplexTraces{names}, k::Symbol) where {names}
     a, b = names
     if k == a
-        Trace(t.trace[1:end-1])
+        convert(AbstractTrace, t.trace[1:end-1])
     elseif k == b
-        Trace(t.trace[2:end])
+        convert(AbstractTrace, t.trace[2:end])
     else
         throw(ArgumentError("unknown trace name: $k"))
     end
