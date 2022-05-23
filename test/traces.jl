@@ -21,10 +21,7 @@
     @test t_12.a == [1, 2]
     @test t_12.b == [false, true]
 
-    t_12.a[1] = 0
-    @test t[:a][1] != 0
-
-    t_12_view = @view t[1:2]
+    t_12_view = t[1:2]
     t_12_view.a[1] = 0
     @test t[:a][1] == 0
 
@@ -79,8 +76,8 @@ end
 
     @test t3[:a][1:3] == [1, 2, 3]
 
-    t3_view = @view t3[1:3]
-    t3_view.a[1] = 0
+    t3_view = t3[1:3]
+    t3_view[:a][1] = 0
     @test t3[:a][1] == 0
 
     pop!(t3)
@@ -109,11 +106,7 @@ end
 
     @test length(t8) == 3
 
-    t8_view = @view t8[2:3]
+    t8_view = t8[2:3]
     t8_view.a[1] = 0
     @test t8[:a][2] == 0
-
-    t8_slice = t8[2:3]
-    t8_slice.a[1] = -1
-    @test t8[:a][2] != -1
 end
