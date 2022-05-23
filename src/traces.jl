@@ -106,7 +106,7 @@ struct MultiplexTraces{names,T,E} <: AbstractTraces{names,Tuple{E,E}}
     trace::T
 end
 
-function MultiplexTraces{names}(t::AbstractVector) where {names}
+function MultiplexTraces{names}(t) where {names}
     if length(names) != 2
         throw(ArgumentError("MultiplexTraces has exactly two sub traces, got $length(names) trace names"))
     end
