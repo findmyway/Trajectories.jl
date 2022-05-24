@@ -83,7 +83,7 @@ end
 
 function Base.take!(t::Trajectory)
     res = on_sample!(t.controler)
-    if isnothing(res)
+    if isnothing(res) && !isnothing(t.controler)
         nothing
     else
         sample(t.sampler, t.container)
