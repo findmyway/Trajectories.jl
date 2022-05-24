@@ -20,7 +20,7 @@ Base.size(e::Episode) = size(e.traces)
 
 Episode(t::T) where {T<:AbstractTraces} = Episode{T,eltype(t)}(t, Ref(false))
 
-for f in (:push!, :pushfirst!, :append!, :prepend!)
+for f in (:push!, :append!)
     @eval function Base.$f(t::Episode, x)
         if t.is_terminated[]
             throw(ArgumentError("The episode is already flagged as done!"))
@@ -35,6 +35,8 @@ function Base.pop!(t::Episode)
     t.is_terminated[] = false
 end
 
+Base.pushfirst!(t::Episode, x) = pushfirst!(t.traces, x)
+Base.prepend!(t::Episode, x) = prepend!(t.traces, x)
 Base.popfirst!(t::Episode) = popfirst!(t.traces)
 
 function Base.empty!(t::Episode)

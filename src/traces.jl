@@ -53,38 +53,6 @@ Base.haskey(t::AbstractTraces{names}, k::Symbol) where {names} = k in names
 #####
 
 """
-    Traces(;kw...)
-"""
-struct Traces{T,names,E} <: AbstractTraces{names,E}
-    traces::T
-    function Traces(; kw...)
-        data = map(x -> convert(AbstractTrace, x), values(kw))
-        new{typeof(data),keys(data),Tuple{typeof(data).types...}}(data)
-    end
-end
-
-Base.getindex(t::Traces, s::Symbol) = getindex(t.traces, s)
-Base.getindex(t::Traces, i) = map(x -> getindex(x, i), t.traces)
-
-@forward Traces.traces Base.parent
-
-Base.size(t::Traces) = (mapreduce(length, min, t.traces),)
-
-for f in (:push!, :pushfirst!, :append!, :prepend!)
-    @eval function Base.$f(ts::Traces, xs::NamedTuple)
-        for (k, v) in pairs(xs)
-            $f(ts.traces[k], v)
-        end
-    end
-end
-
-for f in (:pop!, :popfirst!, :empty!)
-    @eval Base.$f(ts::Traces) = map($f, ts.traces)
-end
-
-#####
-
-"""
     MultiplexTraces{names}(trace)
 
 A special [`AbstractTraces`](@ref) which has exactly two traces of the same
@@ -144,57 +112,77 @@ for f in (:push!, :pushfirst!, :append!, :prepend!)
 end
 
 #####
-
-struct MergedTraces{names,T,N,E} <: AbstractTraces{names,E}
+struct Traces{names,T,N,E} <: AbstractTraces{names,E}
     traces::T
     inds::NamedTuple{names,NTuple{N,Int}}
 end
 
-Base.getindex(ts::MergedTraces, s::Symbol) = ts.traces[ts.inds[s]][s]
+
+function Traces(; kw...)
+    data = map(x -> convert(AbstractTrace, x), values(kw))
+    names = keys(data)
+    inds = NamedTuple(k => i for (i, k) in enumerate(names))
+    Traces{names,typeof(data),length(names),typeof(values(data))}(data, inds)
+end
+
+
+function Base.getindex(ts::Traces, s::Symbol)
+    t = ts.traces[ts.inds[s]]
+    if t isa AbstractTrace
+        t
+    else
+        t[s]
+    end
+end
+
+Base.getindex(t::Traces{names}, i) where {names} = NamedTuple{names}(map(k -> t[k][i], names))
 
 function Base.:(+)(t1::AbstractTraces{k1,T1}, t2::AbstractTraces{k2,T2}) where {k1,k2,T1,T2}
     ks = (k1..., k2...)
     ts = (t1, t2)
     inds = (; (k => 1 for k in k1)..., (k => 2 for k in k2)...)
-    MergedTraces{ks,typeof(ts),length(ks),Tuple{T1.types...,T2.types...}}(ts, inds)
+    Traces{ks,typeof(ts),length(ks),Tuple{T1.types...,T2.types...}}(ts, inds)
 end
 
-function Base.:(+)(t1::AbstractTraces{k1,T1}, t2::MergedTraces{k2,T,N,T2}) where {k1,T1,k2,T,N,T2}
+function Base.:(+)(t1::AbstractTraces{k1,T1}, t2::Traces{k2,T,N,T2}) where {k1,T1,k2,T,N,T2}
     ks = (k1..., k2...)
     ts = (t1, t2.traces...)
-    inds = merge(NamedTuple(k => 1 for k in k1), map(v => v + 1, t1.inds))
-    MergedTraces{ks,typeof(ts),length(ks),Tuple{T1.types...,T2.types...}}(ts, inds)
+    inds = merge(NamedTuple(k => 1 for k in k1), map(v -> v + 1, t2.inds))
+    Traces{ks,typeof(ts),length(ks),Tuple{T1.types...,T2.types...}}(ts, inds)
 end
 
 
-function Base.:(+)(t1::MergedTraces{k1,T,N,T1}, t2::AbstractTraces{k2,T2}) where {k1,T,N,T1,k2,T2}
+function Base.:(+)(t1::Traces{k1,T,N,T1}, t2::AbstractTraces{k2,T2}) where {k1,T,N,T1,k2,T2}
     ks = (k1..., k2...)
     ts = (t1.traces..., t2)
     inds = merge(t1.inds, (; (k => length(ts) for k in k2)...))
-    MergedTraces{ks,typeof(ts),length(ks),Tuple{T1.types...,T2.types...}}(ts, inds)
+    Traces{ks,typeof(ts),length(ks),Tuple{T1.types...,T2.types...}}(ts, inds)
 end
 
-function Base.:(+)(t1::MergedTraces{k1,T1,N1,E1}, t2::MergedTraces{k2,T2,N2,E2}) where {k1,T1,N1,E1,k2,T2,N2,E2}
+function Base.:(+)(t1::Traces{k1,T1,N1,E1}, t2::Traces{k2,T2,N2,E2}) where {k1,T1,N1,E1,k2,T2,N2,E2}
     ks = (k1..., k2...)
     ts = (t1.traces..., t2.traces...)
     inds = merge(t1.inds, map(x -> x + length(t1.traces), t2.inds))
-    MergedTraces{ks,typeof(ts),length(ks),Tuple{T1.types...,T2.types...}}(ts, inds)
+    Traces{ks,typeof(ts),length(ks),Tuple{E1.types...,E2.types...}}(ts, inds)
 end
 
-
-Base.size(t::MergedTraces) = (mapreduce(length, min, t.traces),)
-Base.getindex(t::MergedTraces, I) = mapreduce(x -> getindex(x, I), merge, t.traces)
+Base.size(t::Traces) = (mapreduce(length, min, t.traces),)
 
 for f in (:push!, :pushfirst!, :append!, :prepend!)
-    @eval function Base.$f(ts::MergedTraces, xs::NamedTuple)
+    @eval function Base.$f(ts::Traces, xs::NamedTuple)
         for (k, v) in pairs(xs)
-            $f(ts.traces[ts.inds[k]], (; k => v))
+            t = ts.traces[ts.inds[k]]
+            if t isa AbstractTrace
+                $f(t, v)
+            else
+                $f(t, (; k => v))
+            end
         end
     end
 end
 
 for f in (:pop!, :popfirst!, :empty!)
-    @eval function Base.$f(ts::MergedTraces)
+    @eval function Base.$f(ts::Traces)
         for t in ts.traces
             $f(t)
         end
