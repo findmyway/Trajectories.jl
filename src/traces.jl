@@ -8,9 +8,14 @@ abstract type AbstractTrace{E} <: AbstractVector{E} end
 
 Base.convert(::Type{AbstractTrace}, x::AbstractTrace) = x
 
+Base.summary(io::IO, t::AbstractTrace) = print(io, "$(length(t))-element $(nameof(typeof(t)))")
+
+#####
 struct Trace{T,E} <: AbstractTrace{E}
     parent::T
 end
+
+Base.summary(io::IO, t::Trace{T}) where {T} = print(io, "$(length(t))-element $(nameof(typeof(t))){$T}")
 
 function Trace(x::T) where {T<:AbstractArray}
     E = eltype(x)
@@ -41,7 +46,7 @@ abstract type AbstractTraces{names,T} <: AbstractVector{NamedTuple{names,T}} end
 
 function Base.show(io::IO, ::MIME"text/plain", t::AbstractTraces{names,T}) where {names,T}
     s = nameof(typeof(t))
-    println(io, "$s with $(length(names)) traces:")
+    println(io, "$s with $(length(names)) entries:")
     for n in names
         println(io, "  :$n => $(summary(t[n]))")
     end
