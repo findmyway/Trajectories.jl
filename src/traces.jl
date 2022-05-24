@@ -1,6 +1,7 @@
-export Trace, Traces, MultiplexTraces
+export Trace, Traces, MultiplexTraces, Episode, Episodes
 
 import MacroTools: @forward
+import StackViews: StackView
 
 #####
 
@@ -112,6 +113,130 @@ for f in (:push!, :pushfirst!, :append!, :prepend!)
             $f(t.trace, v)
         else
             throw(ArgumentError("unknown trace name: $k"))
+        end
+    end
+end
+
+#####
+
+"""
+    Episode(traces)
+
+An `Episode` is a wrapper around [`Traces`](@ref). You can use `(e::Episode)[]`
+to check/update whether the episode reaches a terminal or not.
+"""
+struct Episode{T,names,E} <: AbstractTraces{names,E}
+    traces::T
+    is_terminated::Ref{Bool}
+end
+
+Episode(t::AbstractTraces{names,T}) where {names,T} = Episode{typeof(t),names,T}(t, Ref(false))
+
+@forward Episode.traces Base.getindex, Base.setindex!, Base.size
+
+Base.getindex(e::Episode) = getindex(e.is_terminated)
+Base.setindex!(e::Episode, x::Bool) = setindex!(e.is_terminated, x)
+
+for f in (:push!, :append!)
+    @eval function Base.$f(t::Episode, x)
+        if t.is_terminated[]
+            throw(ArgumentError("The episode is already flagged as done!"))
+        else
+            $f(t.traces, x)
+        end
+    end
+end
+
+function Base.pop!(t::Episode)
+    pop!(t.traces)
+    t.is_terminated[] = false
+end
+
+Base.pushfirst!(t::Episode, x) = pushfirst!(t.traces, x)
+Base.prepend!(t::Episode, x) = prepend!(t.traces, x)
+Base.popfirst!(t::Episode) = popfirst!(t.traces)
+
+function Base.empty!(t::Episode)
+    empty!(t.traces)
+    t.is_terminated[] = false
+end
+
+#####
+
+"""
+    Episodes(init)
+
+A container for multiple [`Episode`](@ref)s. `init` is a parameterness function which return an empty [`Episode`](@ref).
+"""
+struct Episodes{names,E} <: AbstractTraces{names,E}
+    init::Any
+    episodes::Vector{Episode}
+    inds::Vector{Tuple{Int,Int}}
+end
+
+function Episodes(init)
+    x = init()
+    @assert x isa Episode
+    @assert length(x) == 0
+    names, E = eltype(x).parameters
+    Episodes{names,E}(init, [x], Tuple{Int,Int}[])
+end
+
+Base.size(e::Episodes) = size(e.inds)
+
+Base.setindex!(e::Episodes, is_terminated::Bool) = setindex!(e.episodes[end], is_terminated)
+
+Base.getindex(e::Episodes) = getindex(e.episodes[end])
+
+function Base.getindex(e::Episodes, I::Int)
+    i, j = e.inds[I]
+    e.episodes[i][j]
+end
+
+function Base.getindex(e::Episodes{names}, I) where {names}
+    NamedTuple{names}(
+        StackView(
+            map(I) do i
+                x, y = e.inds[i]
+                e.episodes[x][n][y]
+            end
+        )
+        for n in names
+    )
+end
+
+function Base.getindex(e::Episodes, I::Symbol)
+    @warn "The returned trace is a vector of partitions instead of a continuous view" maxlog = 1
+    map(x -> x[I], e.episodes)
+end
+
+function Base.push!(e::Episodes, x::Episode)
+    # !!! note we do not check whether the last Episode is terminated or not here
+    push!(e.episodes, x)
+    for i in 1:length(x)
+        push!(e.inds, (length(e.episodes), i))
+    end
+end
+
+function Base.append!(e::Episodes, xs::AbstractVector{<:Episode})
+    # !!! note we do not check whether each Episode is terminated or not here
+    for x in xs
+        push!(e, x)
+    end
+end
+
+function Base.push!(e::Episodes, x::NamedTuple)
+    if isempty(e.episodes) || e.episodes[end][]
+        episode = e.init()
+        push!(episode, x)
+        push!(e, episode)
+    else
+        n_pre = length(e.episodes[end])
+        push!(e.episodes[end], x)
+        n_post = length(e.episodes[end])
+        # this is to support partial inserting
+        if n_post - n_pre == 1
+            push!(e.inds, (length(e.episodes), length(e.episodes[end])))
         end
     end
 end
