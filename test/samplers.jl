@@ -7,7 +7,7 @@ using Trajectories, Test
             b=Bool[]
         ),
         sampler = MetaSampler(policy = BatchSampler(3), critic = BatchSampler(5)),
-        controler = InsertSampleControler(10, 0)
+        controller = InsertSampleController(10, 0)
     )
 
     append!(t; a=[1, 2, 3, 4], b=[false, true, false, true])
@@ -29,7 +29,7 @@ end
             b=Bool[]
         ),
         sampler = MetaSampler(policy = BatchSampler(3), critic = MultiBatchSampler(BatchSampler(5), 2)),
-        controler = InsertSampleControler(10, 0)
+        controller = InsertSampleController(10, 0)
     )
 
     append!(t; a=[1, 2, 3, 4], b=[false, true, false, true])
@@ -55,7 +55,7 @@ end
             b=Bool[]
         ),
         sampler=BatchSampler(3),
-        controler=AsyncInsertSampleRatioControler(ratio, threshould)
+        controller=AsyncInsertSampleRatioController(ratio, threshould)
     )
 
     n = 100
