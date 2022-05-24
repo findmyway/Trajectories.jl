@@ -1,4 +1,4 @@
-export InsertSampleRatioControler, AsyncInsertSampleRatioControler
+export InsertSampleRatioControler, InsertSampleControler, AsyncInsertSampleRatioControler
 
 mutable struct InsertSampleRatioControler
     ratio::Float64
@@ -25,6 +25,36 @@ end
 function on_sample!(c::InsertSampleRatioControler)
     if c.n_inserted >= c.threshold
         if c.n_sampled <= (c.n_inserted - c.threshold) * c.ratio
+            c.n_sampled += 1
+            true
+        end
+    end
+end
+
+"""
+    InsertSampleControler(n, threshold)
+
+Used in [`Trajectory`](@ref). The `threshold` means the minimal number of
+insertings before sampling. The `n` is the number of samples until stopping.
+"""
+mutable struct InsertSampleControler
+    n::Int
+    threshold::Int
+    n_inserted::Int
+    n_sampled::Int
+end
+
+InsertSampleControler(n, threshold) = InsertSampleControler(n, threshold, 0, 0)
+
+function on_insert!(c::InsertSampleControler, n::Int)
+    if n > 0
+        c.n_inserted += n
+    end
+end
+
+function on_sample!(c::InsertSampleControler)
+    if c.n_inserted >= c.threshold
+        if c.n_sampled < c.n
             c.n_sampled += 1
             true
         end
