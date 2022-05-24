@@ -110,7 +110,7 @@ function Base.convert(r::Type{Term.AbstractRenderable}, t::Trajectory; width=88)
     Panel(
         convert(r, t.container; width=width - 8) /
         Panel(convert(Term.Tree, t.sampler); title="sampler", style="yellow3", fit=true, width=width - 8) /
-        Panel(convert(Term.Tree, t.controler); title="controler", style="yellow3", fit=true, width=width - 8);
+        Panel(convert(Term.Tree, t.controller); title="controller", style="yellow3", fit=true, width=width - 8);
         title="Trajectory",
         style="yellow3",
         width=width,
