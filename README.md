@@ -67,6 +67,8 @@ julia> for batch in t
 **Samplers**
 
 - `BatchSampler`
+- `MetaSampler`
+- `MultiBatchSampler`
 
 **Controllers**
 
