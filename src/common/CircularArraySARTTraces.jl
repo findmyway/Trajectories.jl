@@ -1,5 +1,15 @@
 export CircularArraySARTTraces
 
+const CircularArraySARTTraces = Traces{
+    SSAART,
+    <:Tuple{
+        <:MultiplexTraces{SS,<:Trace{<:CircularArrayBuffer}},
+        <:MultiplexTraces{AA,<:Trace{<:CircularArrayBuffer}},
+        <:Trace{<:CircularArrayBuffer},
+        <:Trace{<:CircularArrayBuffer},
+    }
+}
+
 function CircularArraySARTTraces(;
     capacity::Int,
     state=Int => (),
@@ -12,8 +22,8 @@ function CircularArraySARTTraces(;
     reward_eltype, reward_size = reward
     terminal_eltype, terminal_size = terminal
 
-    MultiplexTraces{(:state, :next_state)}(CircularArrayBuffer{state_eltype}(state_size..., capacity + 1)) +
-    MultiplexTraces{(:action, :next_action)}(CircularArrayBuffer{action_eltype}(action_size..., capacity + 1)) +
+    MultiplexTraces{SS}(CircularArrayBuffer{state_eltype}(state_size..., capacity + 1)) +
+    MultiplexTraces{AA}(CircularArrayBuffer{action_eltype}(action_size..., capacity + 1)) +
     Traces(
         reward=CircularArrayBuffer{reward_eltype}(reward_size..., capacity),
         terminal=CircularArrayBuffer{terminal_eltype}(terminal_size..., capacity),

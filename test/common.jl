@@ -2,10 +2,12 @@
     t = CircularArraySARTTraces(;
         capacity=3,
         state=Float32 => (2, 3),
-        action=Float32 => (2),
+        action=Float32 => (2,),
         reward=Float32 => (),
         terminal=Bool => ()
     )
+
+    @test t isa CircularArraySARTTraces
 
     push!(t, (state=ones(Float32, 2, 3), action=ones(Float32, 2)))
     @test length(t) == 0
@@ -61,4 +63,17 @@
     @test size(batch.action) == (2, 3)
     @test batch.reward == [2.0, 3.0, 4.0]
     @test batch.terminal == Bool[0, 0, 0]
+end
+
+@testset "CircularArraySLARTTraces" begin
+    t = CircularArraySLARTTraces(;
+        capacity=3,
+        state=Float32 => (2, 3),
+        legal_actions_mask=Bool => (5,),
+        action=Int => (),
+        reward=Float32 => (),
+        terminal=Bool => ()
+    )
+
+    @test t isa CircularArraySLARTTraces
 end
