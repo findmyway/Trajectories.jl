@@ -5,7 +5,7 @@
             b=Bool[]
         ),
         sampler=BatchSampler(3),
-        controler=InsertSampleRatioControler(0.25, 4)
+        controller=InsertSampleRatioController(0.25, 4)
     )
 
     batches = []
@@ -69,7 +69,7 @@ end
             b=Bool[]
         ),
         sampler=BatchSampler(3),
-        controler=AsyncInsertSampleRatioControler(ratio, threshould)
+        controller=AsyncInsertSampleRatioController(ratio, threshould)
     )
 
     n = 100

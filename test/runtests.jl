@@ -7,4 +7,5 @@ using Test
     include("common.jl")
     include("samplers.jl")
     include("trajectories.jl")
+    include("samplers.jl")
 end

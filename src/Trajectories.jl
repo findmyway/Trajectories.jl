@@ -4,7 +4,7 @@ include("patch.jl")
 
 include("traces.jl")
 include("samplers.jl")
-include("controlers.jl")
+include("controllers.jl")
 include("trajectory.jl")
 include("common/common.jl")
 
