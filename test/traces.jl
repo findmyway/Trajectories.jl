@@ -167,12 +167,12 @@ end
 
     @test t[end] == (state=2.0, action=2)
 
-    # https://github.com/JuliaArrays/StackViews.jl/issues/3
-    @test_broken t[1:2] == (state=[1.0, 2.0], action=[1, 2])
+    @test t[1:2] == (state=[1.0, 2.0], action=[1, 2])
 
     push!(t, (state=3.0, action=3))
     t[] = true # seal
 
+    # a vector of episode-level partitions is returned for now
     @test_broken size(t[:state]) == (3,)
 
     push!(t, Episode(Traces(state=[4.0, 5.0, 6.0], action=[4, 5, 6])))

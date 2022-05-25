@@ -21,7 +21,7 @@
 
     @test length(e) == 5
     @test size(e[2:4].state) == (2, 3, 3)
-    @test_broken size(e[2:4].action) == (3,)
+    @test size(e[2:4].action) == (3,)
 end
 
 @testset "MetaSampler" begin

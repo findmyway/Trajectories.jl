@@ -1,7 +1,6 @@
 export Trace, Traces, MultiplexTraces, Episode, Episodes
 
 import MacroTools: @forward
-import StackViews: StackView
 
 #####
 
@@ -196,7 +195,7 @@ end
 
 function Base.getindex(e::Episodes{names}, I) where {names}
     NamedTuple{names}(
-        StackView(
+        lazy_stack(
             map(I) do i
                 x, y = e.inds[i]
                 e.episodes[x][n][y]
