@@ -168,18 +168,19 @@ end
 
 A container for multiple [`Episode`](@ref)s. `init` is a parameterness function which return an empty [`Episode`](@ref).
 """
-struct Episodes{names,E} <: AbstractTraces{names,E}
+struct Episodes{names,E,T} <: AbstractTraces{names,E}
     init::Any
-    episodes::Vector{Episode}
+    episodes::Vector{T}
     inds::Vector{Tuple{Int,Int}}
 end
 
 function Episodes(init)
     x = init()
+    T = typeof(x)
     @assert x isa Episode
     @assert length(x) == 0
     names, E = eltype(x).parameters
-    Episodes{names,E}(init, [x], Tuple{Int,Int}[])
+    Episodes{names,E,T}(init, [x], Tuple{Int,Int}[])
 end
 
 Base.size(e::Episodes) = size(e.inds)
