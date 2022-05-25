@@ -1,5 +1,7 @@
 export BatchSampler, MetaSampler, MultiBatchSampler
 
+using MLUtils: batch
+
 using Random
 
 abstract type AbstractSampler end
@@ -17,7 +19,12 @@ Uniformly sample a batch of examples for each trace.
 
 See also [`sample`](@ref).
 """
-BatchSampler(batch_size; rng=Random.GLOBAL_RNG, transformer=identity) = BatchSampler(batch_size, rng, identity)
+BatchSampler(batch_size; rng=Random.GLOBAL_RNG, transformer=batch) = BatchSampler(batch_size, rng, transformer)
+
+function sample(s::BatchSampler, t::AbstractTraces)
+    inds = rand(s.rng, 1:length(t), s.batch_size)
+    map(s.transformer, t[inds])
+end
 
 """
     MetaSampler(::NamedTuple)
@@ -29,15 +36,13 @@ Used internally for algorithms that sample multiple times per epoch.
 
 MetaSampler(policy = BatchSampler(10), critic = BatchSampler(100))
 """
-struct MetaSampler{names, T} <: AbstractSampler
-    samplers::NamedTuple{names, T}
+struct MetaSampler{names,T} <: AbstractSampler
+    samplers::NamedTuple{names,T}
 end
 
 MetaSampler(; kw...) = MetaSampler(NamedTuple(kw))
 
-function sample(s::MetaSampler, t)
-   (;[(k, sample(v, t)) for (k,v) in pairs(s.samplers)]...)
-end
+sample(s::MetaSampler, t) = map(x -> sample(x, t), s.samplers)
 
 
 """
@@ -49,7 +54,7 @@ Wraps a sampler. When sampled, will sample n batches using sampler. Useful in co
 
 MetaSampler(policy = MultiBatchSampler(BatchSampler(10), 3), critic = MultiBatchSampler(BatchSampler(100), 5))
 """
-struct MultiBatchSampler{S <: AbstractSampler} <: AbstractSampler
+struct MultiBatchSampler{S<:AbstractSampler} <: AbstractSampler
     sampler::S
     n::Int
 end

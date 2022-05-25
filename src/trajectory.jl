@@ -1,7 +1,9 @@
-export Trajectory
+export Trajectory, TrajectoryStyle, SyncTrajectoryStyle, AsyncTrajectoryStyle
 
 using Base.Threads
 
+struct AsyncTrajectoryStyle end
+struct SyncTrajectoryStyle end
 
 """
     Trajectory(container, sampler, controller)
@@ -53,8 +55,15 @@ Base.@kwdef struct Trajectory{C,S,T}
     end
 end
 
+TrajectoryStyle(::Trajectory) = SyncTrajectoryStyle()
+TrajectoryStyle(::Trajectory{<:Any,<:Any,<:AsyncInsertSampleRatioController}) = AsyncTrajectoryStyle()
 
-Base.push!(t::Trajectory; kw...) = push!(t, values(kw))
+Base.bind(::Trajectory, ::Task) = nothing
+
+function Base.bind(t::Trajectory{<:Any,<:Any,<:AsyncInsertSampleRatioController}, task)
+    bind(t.controler.ch_in, task)
+    bind(t.controler.ch_out, task)
+end
 
 function Base.push!(t::Trajectory, x)
     n_pre = length(t.container)
@@ -71,8 +80,6 @@ end
 
 Base.push!(t::Trajectory{<:Any,<:Any,<:AsyncInsertSampleRatioController}, args...; kw...) = put!(t.controller.ch_in, CallMsg(Base.push!, args, kw))
 Base.append!(t::Trajectory{<:Any,<:Any,<:AsyncInsertSampleRatioController}, args...; kw...) = put!(t.controller.ch_in, CallMsg(Base.append!, args, kw))
-
-Base.append!(t::Trajectory; kw...) = append!(t, values(kw))
 
 function Base.append!(t::Trajectory, x)
     n_pre = length(t.container)
