@@ -1,7 +1,7 @@
 module Trajectories
 
 include("samplers.jl")
-include("controlers.jl")
+include("controllers.jl")
 include("traces.jl")
 include("episodes.jl")
 include("trajectory.jl")
