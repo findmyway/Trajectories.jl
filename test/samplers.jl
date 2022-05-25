@@ -35,7 +35,7 @@ end
 
     append!(t, (a=rand(Int, 10), b=rand(Bool, 10)))
 
-    batches = [x for x in t]
+    batches = collect(t)
 
     @test length(batches) == 10
     @test length(batches[1][:policy][:a]) == 3 && length(batches[1][:critic][:b]) == 5
@@ -52,7 +52,7 @@ end
 
     append!(t, (a=rand(Int, 10), b=rand(Bool, 10)))
 
-    batches = [x for x in t]
+    batches = collect(t)
 
     @test length(batches) == 10
     @test length(batches[1][:policy][:a]) == 3

@@ -1,4 +1,4 @@
-export InsertSampleRatioController, InsertSampleController, AsyncInsertSampleRatioController
+export InsertSampleRatioController, AsyncInsertSampleRatioController
 
 """
     InsertSampleRatioController(;ratio=1., threshold=1)

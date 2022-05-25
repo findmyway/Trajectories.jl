@@ -6,11 +6,11 @@
         ),
         sampler=BatchSampler(3),
     )
-    batches = [x for x in t]
+    batches = collect(t)
     @test length(batches) == 0
 
     push!(t, (a=1, b=false))
-    batches = [x for x in t]
+    batches = collect(t)
     @test length(batches) == 1
 end
 
