@@ -1,5 +1,7 @@
 module Trajectories
 
+include("patch.jl")
+
 include("traces.jl")
 include("samplers.jl")
 include("controlers.jl")
