@@ -1,4 +1,7 @@
-module Trajectories
+module ReinforcementLearningTrajectories
+
+const RLTrajectories = ReinforcementLearningTrajectories
+export RLTrajectories
 
 include("patch.jl")
 

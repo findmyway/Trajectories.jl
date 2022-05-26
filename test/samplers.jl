@@ -6,7 +6,7 @@
         action=rand(1:4, 5),
     )
 
-    b = Trajectories.sample(s, t)
+    b = ReinforcementLearningTrajectories.sample(s, t)
 
     @test keys(b) == (:state, :action)
     @test size(b.state) == (3, 4, sz)

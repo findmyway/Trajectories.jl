@@ -1,8 +1,8 @@
-using Trajectories
+using ReinforcementLearningTrajectories
 using CircularArrayBuffers
 using Test
 
-@testset "Trajectories.jl" begin
+@testset "ReinforcementLearningTrajectories.jl" begin
     include("traces.jl")
     include("common.jl")
     include("samplers.jl")
