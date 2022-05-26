@@ -73,7 +73,6 @@ julia> for batch in t
 **Controllers**
 
 - `InsertSampleRatioController` 
-- `InsertSampleController`
 - `AsyncInsertSampleRatioController`
 
 
