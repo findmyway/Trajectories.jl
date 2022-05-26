@@ -1,20 +1,18 @@
-export InsertSampleRatioController, InsertSampleController, AsyncInsertSampleRatioController
-
-mutable struct InsertSampleRatioController
-    ratio::Float64
-    threshold::Int
-    n_inserted::Int
-    n_sampled::Int
-end
+export InsertSampleRatioController, AsyncInsertSampleRatioController
 
 """
-    InsertSampleRatioController(ratio, threshold)
+    InsertSampleRatioController(;ratio=1., threshold=1)
 
 Used in [`Trajectory`](@ref). The `threshold` means the minimal number of
 insertings before sampling. The `ratio` balances the number of insertings and
 the number of samplings.
 """
-InsertSampleRatioController(ratio, threshold) = InsertSampleRatioController(ratio, threshold, 0, 0)
+Base.@kwdef mutable struct InsertSampleRatioController
+    ratio::Float64 = 1.0
+    threshold::Int = 1
+    n_inserted::Int = 0
+    n_sampled::Int = 0
+end
 
 function on_insert!(c::InsertSampleRatioController, n::Int)
     if n > 0
@@ -25,36 +23,6 @@ end
 function on_sample!(c::InsertSampleRatioController)
     if c.n_inserted >= c.threshold
         if c.n_sampled <= (c.n_inserted - c.threshold) * c.ratio
-            c.n_sampled += 1
-            true
-        end
-    end
-end
-
-"""
-    InsertSampleController(n, threshold)
-
-Used in [`Trajectory`](@ref). The `threshold` means the minimal number of
-insertings before sampling. The `n` is the number of samples until stopping.
-"""
-mutable struct InsertSampleController
-    n::Int
-    threshold::Int
-    n_inserted::Int
-    n_sampled::Int
-end
-
-InsertSampleController(n, threshold) = InsertSampleController(n, threshold, 0, 0)
-
-function on_insert!(c::InsertSampleController, n::Int)
-    if n > 0
-        c.n_inserted += n
-    end
-end
-
-function on_sample!(c::InsertSampleController)
-    if c.n_inserted >= c.threshold
-        if c.n_sampled < c.n
             c.n_sampled += 1
             true
         end

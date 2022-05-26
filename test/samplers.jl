@@ -31,16 +31,11 @@ end
             b=Bool[]
         ),
         sampler=MetaSampler(policy=BatchSampler(3), critic=BatchSampler(5)),
-        controller=InsertSampleController(10, 0)
     )
 
-    append!(t, (a=[1, 2, 3, 4], b=[false, true, false, true]))
+    append!(t, (a=rand(Int, 10), b=rand(Bool, 10)))
 
-    batches = []
-
-    for batch in t
-        push!(batches, batch)
-    end
+    batches = collect(t)
 
     @test length(batches) == 10
     @test length(batches[1][:policy][:a]) == 3 && length(batches[1][:critic][:b]) == 5
@@ -53,16 +48,11 @@ end
             b=Bool[]
         ),
         sampler=MetaSampler(policy=BatchSampler(3), critic=MultiBatchSampler(BatchSampler(5), 2)),
-        controller=InsertSampleController(10, 0)
     )
 
-    append!(t, (a=[1, 2, 3, 4], b=[false, true, false, true]))
+    append!(t, (a=rand(Int, 10), b=rand(Bool, 10)))
 
-    batches = []
-
-    for batch in t
-        push!(batches, batch)
-    end
+    batches = collect(t)
 
     @test length(batches) == 10
     @test length(batches[1][:policy][:a]) == 3

@@ -23,7 +23,7 @@ Supported methoes are:
 Base.@kwdef struct Trajectory{C,S,T}
     container::C
     sampler::S
-    controller::T
+    controller::T = InsertSampleRatioController()
 
     Trajectory(c::C, s::S, t::T) where {C,S,T} = new{C,S,T}(c, s, t)
 
@@ -90,7 +90,7 @@ end
 
 function Base.take!(t::Trajectory)
     res = on_sample!(t.controller)
-    if isnothing(res) && !isnothing(t.controller)
+    if isnothing(res)
         nothing
     else
         sample(t.sampler, t.container)
@@ -110,3 +110,6 @@ Base.iterate(t::Trajectory, state) = iterate(t)
 
 Base.iterate(t::Trajectory{<:Any,<:Any,<:AsyncInsertSampleRatioController}, args...) = iterate(t.controller.ch_out, args...)
 Base.take!(t::Trajectory{<:Any,<:Any,<:AsyncInsertSampleRatioController}) = take!(t.controller.ch_out)
+
+Base.IteratorSize(::Trajectory{<:Any,<:Any,<:AsyncInsertSampleRatioController}) = Base.IsInfinite()
+Base.IteratorSize(::Trajectory) = Base.SizeUnknown()

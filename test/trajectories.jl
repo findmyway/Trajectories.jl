@@ -1,3 +1,19 @@
+@testset "Default InsertSampleRatioController" begin
+    t = Trajectory(
+        container=Traces(
+            a=Int[],
+            b=Bool[]
+        ),
+        sampler=BatchSampler(3),
+    )
+    batches = collect(t)
+    @test length(batches) == 0
+
+    push!(t, (a=1, b=false))
+    batches = collect(t)
+    @test length(batches) == 1
+end
+
 @testset "trajectories" begin
     t = Trajectory(
         container=Traces(
@@ -5,7 +21,7 @@
             b=Bool[]
         ),
         sampler=BatchSampler(3),
-        controller=InsertSampleRatioController(0.25, 4)
+        controller=InsertSampleRatioController(ratio=0.25, threshold=4)
     )
 
     batches = []
