@@ -1,4 +1,4 @@
-using Trajectories
+using ReinforcementLearningTrajectories
 using CircularArrayBuffers
 using Test
 

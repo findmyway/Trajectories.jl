@@ -1,4 +1,4 @@
-module Trajectories
+module ReinforcementLearningTrajectories
 
 include("patch.jl")
 

@@ -25,7 +25,7 @@ Base.@kwdef struct Trajectory{C,S,T}
     sampler::S
     controller::T = InsertSampleRatioController()
 
-    Trajectory(c::C, s::S, t::T) where {C,S,T} = new{C,S,T}(c, s, t)
+    Trajectory(c::C, s::S, t::T=InsertSampleRatioController()) where {C,S,T} = new{C,S,T}(c, s, t)
 
     function Trajectory(container::C, sampler::S, controller::T) where {C,S,T<:AsyncInsertSampleRatioController}
         t = Threads.@spawn while true
