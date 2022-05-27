@@ -32,7 +32,7 @@ end
 
     @test length(batches) == 0  # threshold not reached yet
 
-    append!(t, (a=[1, 2, 3], b=[false, true, false]))
+    append!(t, Traces(a=[1, 2, 3], b=[false, true, false]))
 
     for batch in t
         push!(batches, batch)
@@ -48,7 +48,7 @@ end
 
     @test length(batches) == 1  # 4 inserted, threshold is 4, ratio is 0.25
 
-    append!(t, (a=[5, 6, 7], b=[true, true, true]))
+    append!(t, Traces(a=[5, 6, 7], b=[true, true, true]))
 
     for batch in t
         push!(batches, batch)
@@ -66,7 +66,7 @@ end
 
     n = 100
     for i in 1:n
-        append!(t, (a=[i, i, i, i], b=[false, true, false, true]))
+        append!(t, Traces(a=[i, i, i, i], b=[false, true, false, true]))
     end
 
     s = 0
@@ -90,7 +90,7 @@ end
 
     n = 100
     insert_task = @async for i in 1:n
-        append!(t, (a=[i, i, i, i], b=[false, true, false, true]))
+        append!(t, Traces(a=[i, i, i, i], b=[false, true, false, true]))
     end
 
     s = 0

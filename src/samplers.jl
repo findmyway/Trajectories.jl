@@ -17,7 +17,9 @@ Uniformly sample a batch of examples for each trace specified in `names`. By def
 
 See also [`sample`](@ref).
 """
+BatchSampler(batch_size; kw...) = BatchSampler(; batch_size=batch_size, kw...)
 BatchSampler(; kw...) = BatchSampler{nothing}(; kw...)
+BatchSampler{names}(batch_size; kw...) where {names} = BatchSampler{names}(; batch_size=batch_size, kw...)
 BatchSampler{names}(; batch_size, rng=Random.GLOBAL_RNG, transformer=identity) where {names} = BatchSampler{names}(batch_size, rng, transformer)
 
 sample(s::BatchSampler{nothing}, t::AbstractTraces) = sample(s, t, keys(t))

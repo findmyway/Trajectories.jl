@@ -11,7 +11,7 @@
     @test t[:a][end] == 3
     @test t[:b][end] == true
 
-    append!(t, (a=[4, 5], b=[false, false]))
+    append!(t, Traces(a=[4, 5], b=[false, false]))
     @test length(t[:a]) == 5
     @test t[:b][end-1:end] == [false, false]
 
@@ -71,7 +71,7 @@ end
     @test length(t3) == 1
     @test t3[1] == (a=1, b=false)
 
-    append!(t3, (; a=[2, 3], b=[false, true]))
+    append!(t3, Traces(; a=[2, 3], b=[false, true]))
     @test length(t3) == 3
 
     @test t3[:a][1:3] == [1, 2, 3]
@@ -102,7 +102,7 @@ end
 
     empty!(t8)
     push!(t8, (a=1, b=false, aa=1, bb=false))
-    append!(t8, (a=[2, 3], b=[true, true], aa=[2, 3], bb=[true, true]))
+    append!(t8, Traces(a=[2, 3], b=[true, true], aa=[2, 3], bb=[true, true]))
 
     @test length(t8) == 3
 
@@ -124,7 +124,7 @@ end
     push!(t, (state=1, action=1.0))
     @test length(t) == 1
 
-    append!(t, (state=[2, 3], action=[2.0, 3.0]))
+    append!(t, Traces(state=[2, 3], action=[2.0, 3.0]))
     @test length(t) == 3
 
     @test t[:state] == [1, 2, 3]

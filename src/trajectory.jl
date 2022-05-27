@@ -30,11 +30,14 @@ Base.@kwdef struct Trajectory{C,S,T}
     function Trajectory(container::C, sampler::S, controller::T) where {C,S,T<:AsyncInsertSampleRatioController}
         t = Threads.@spawn while true
             for msg in controller.ch_in
-                if msg.f === Base.push! || msg.f === Base.append!
-                    n_pre = length(container)
-                    msg.f(container, msg.args...; msg.kw...)
-                    n_post = length(container)
-                    controller.n_inserted += n_post - n_pre
+                if msg.f === Base.push!
+                    x, = msg.args
+                    msg.f(container, x)
+                    controller.n_inserted += 1
+                elseif msg.f === Base.append!
+                    x, = msg.args
+                    msg.f(container, x)
+                    controller.n_inserted += length(x)
                 else
                     msg.f(container, msg.args...; msg.kw...)
                 end
@@ -78,10 +81,10 @@ struct CallMsg
     kw::Any
 end
 
-Base.push!(t::Trajectory{<:Any,<:Any,<:AsyncInsertSampleRatioController}, args...; kw...) = put!(t.controller.ch_in, CallMsg(Base.push!, args, kw))
-Base.append!(t::Trajectory{<:Any,<:Any,<:AsyncInsertSampleRatioController}, args...; kw...) = put!(t.controller.ch_in, CallMsg(Base.append!, args, kw))
+Base.push!(t::Trajectory{<:Any,<:Any,<:AsyncInsertSampleRatioController}, x) = put!(t.controller.ch_in, CallMsg(Base.push!, (x,), NamedTuple()))
+Base.append!(t::Trajectory{<:Any,<:Any,<:AsyncInsertSampleRatioController}, x) = put!(t.controller.ch_in, CallMsg(Base.append!, (x,), NamedTuple()))
 
-function Base.append!(t::Trajectory, x::AbstractVector)
+function Base.append!(t::Trajectory, x)
     append!(t.container, x)
     on_insert!(t.controller, length(x))
 end
