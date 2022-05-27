@@ -4,7 +4,6 @@ version = "0.1.0"
 
 [deps]
 CircularArrayBuffers = "9de3a189-e0c0-4e15-ba3b-b14b9fb0aec1"
-MLUtils = "f1d291b0-491e-4a28-83b9-f70985020b54"
 MacroTools = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 StackViews = "cae243ae-269e-4f55-b966-ac2d0dc13c15"
@@ -12,7 +11,6 @@ StackViews = "cae243ae-269e-4f55-b966-ac2d0dc13c15"
 [compat]
 CircularArrayBuffers = "0.1"
 MacroTools = "0.5"
-MLUtils = "0.2"
 StackViews = "0.1"
 julia = "1.6"
 

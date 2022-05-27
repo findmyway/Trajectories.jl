@@ -1,7 +1,3 @@
-import MLUtils
-
-MLUtils.batch(x::AbstractArray{<:Number}) = x
-
 #####
 
 import StackViews: StackView

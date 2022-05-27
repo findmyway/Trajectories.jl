@@ -65,11 +65,11 @@ function Base.bind(t::Trajectory{<:Any,<:Any,<:AsyncInsertSampleRatioController}
     bind(t.controler.ch_out, task)
 end
 
+# !!! by default we assume `x`  is a complete example which contains all the traces
+# When doing partial inserting, the result of undefined
 function Base.push!(t::Trajectory, x)
-    n_pre = length(t.container)
     push!(t.container, x)
-    n_post = length(t.container)
-    on_insert!(t.controller, n_post - n_pre)
+    on_insert!(t.controller, 1)
 end
 
 struct CallMsg
@@ -81,12 +81,13 @@ end
 Base.push!(t::Trajectory{<:Any,<:Any,<:AsyncInsertSampleRatioController}, args...; kw...) = put!(t.controller.ch_in, CallMsg(Base.push!, args, kw))
 Base.append!(t::Trajectory{<:Any,<:Any,<:AsyncInsertSampleRatioController}, args...; kw...) = put!(t.controller.ch_in, CallMsg(Base.append!, args, kw))
 
-function Base.append!(t::Trajectory, x)
-    n_pre = length(t.container)
+function Base.append!(t::Trajectory, x::AbstractVector)
     append!(t.container, x)
-    n_post = length(t.container)
-    on_insert!(t.controller, n_post - n_pre)
+    on_insert!(t.controller, length(x))
 end
+
+# !!! bypass the controller
+sample(t::Trajectory) = sample(t.sampler, t.container)
 
 function Base.take!(t::Trajectory)
     res = on_sample!(t.controller)
