@@ -30,11 +30,14 @@ Base.@kwdef struct Trajectory{C,S,T}
     function Trajectory(container::C, sampler::S, controller::T) where {C,S,T<:AsyncInsertSampleRatioController}
         t = Threads.@spawn while true
             for msg in controller.ch_in
-                if msg.f === Base.push! || msg.f === Base.append!
-                    n_pre = length(container)
-                    msg.f(container, msg.args...; msg.kw...)
-                    n_post = length(container)
-                    controller.n_inserted += n_post - n_pre
+                if msg.f === Base.push!
+                    x, = msg.args
+                    msg.f(container, x)
+                    controller.n_inserted += 1
+                elseif msg.f === Base.append!
+                    x, = msg.args
+                    msg.f(container, x)
+                    controller.n_inserted += length(x)
                 else
                     msg.f(container, msg.args...; msg.kw...)
                 end
@@ -65,11 +68,11 @@ function Base.bind(t::Trajectory{<:Any,<:Any,<:AsyncInsertSampleRatioController}
     bind(t.controler.ch_out, task)
 end
 
+# !!! by default we assume `x`  is a complete example which contains all the traces
+# When doing partial inserting, the result of undefined
 function Base.push!(t::Trajectory, x)
-    n_pre = length(t.container)
     push!(t.container, x)
-    n_post = length(t.container)
-    on_insert!(t.controller, n_post - n_pre)
+    on_insert!(t.controller, 1)
 end
 
 struct CallMsg
@@ -78,15 +81,16 @@ struct CallMsg
     kw::Any
 end
 
-Base.push!(t::Trajectory{<:Any,<:Any,<:AsyncInsertSampleRatioController}, args...; kw...) = put!(t.controller.ch_in, CallMsg(Base.push!, args, kw))
-Base.append!(t::Trajectory{<:Any,<:Any,<:AsyncInsertSampleRatioController}, args...; kw...) = put!(t.controller.ch_in, CallMsg(Base.append!, args, kw))
+Base.push!(t::Trajectory{<:Any,<:Any,<:AsyncInsertSampleRatioController}, x) = put!(t.controller.ch_in, CallMsg(Base.push!, (x,), NamedTuple()))
+Base.append!(t::Trajectory{<:Any,<:Any,<:AsyncInsertSampleRatioController}, x) = put!(t.controller.ch_in, CallMsg(Base.append!, (x,), NamedTuple()))
 
 function Base.append!(t::Trajectory, x)
-    n_pre = length(t.container)
     append!(t.container, x)
-    n_post = length(t.container)
-    on_insert!(t.controller, n_post - n_pre)
+    on_insert!(t.controller, length(x))
 end
+
+# !!! bypass the controller
+sample(t::Trajectory) = sample(t.sampler, t.container)
 
 function Base.take!(t::Trajectory)
     res = on_sample!(t.controller)

@@ -1,29 +1,33 @@
 export BatchSampler, MetaSampler, MultiBatchSampler
 
-using MLUtils: batch
-
 using Random
 
 abstract type AbstractSampler end
 
-struct BatchSampler <: AbstractSampler
+struct BatchSampler{names} <: AbstractSampler
     batch_size::Int
     rng::Random.AbstractRNG
     transformer::Any
 end
 
 """
-    BatchSampler(batch_size; rng=Random.GLOBAL_RNG, transformer=identity)
+    BatchSampler{names}(;batch_size, rng=Random.GLOBAL_RNG, transformer=identity)
 
-Uniformly sample a batch of examples for each trace.
+Uniformly sample a batch of examples for each trace specified in `names`. By default, all the traces will be sampled.
 
 See also [`sample`](@ref).
 """
-BatchSampler(batch_size; rng=Random.GLOBAL_RNG, transformer=batch) = BatchSampler(batch_size, rng, transformer)
+BatchSampler(batch_size; kw...) = BatchSampler(; batch_size=batch_size, kw...)
+BatchSampler(; kw...) = BatchSampler{nothing}(; kw...)
+BatchSampler{names}(batch_size; kw...) where {names} = BatchSampler{names}(; batch_size=batch_size, kw...)
+BatchSampler{names}(; batch_size, rng=Random.GLOBAL_RNG, transformer=identity) where {names} = BatchSampler{names}(batch_size, rng, transformer)
 
-function sample(s::BatchSampler, t::AbstractTraces)
+sample(s::BatchSampler{nothing}, t::AbstractTraces) = sample(s, t, keys(t))
+sample(s::BatchSampler{names}, t::AbstractTraces) where {names} = sample(s, t, names)
+
+function sample(s::BatchSampler, t::AbstractTraces, names)
     inds = rand(s.rng, 1:length(t), s.batch_size)
-    map(s.transformer, t[inds])
+    NamedTuple{names}(s.transformer(t[x][inds]) for x in names)
 end
 
 """
