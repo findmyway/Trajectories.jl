@@ -1,27 +1,82 @@
-# Trajectories
+# ReinforcementLearningTrajectories
 
-[![Build Status](https://github.com/JuliaReinforcementLearning/Trajectories.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/JuliaReinforcementLearning/Trajectories.jl/actions/workflows/CI.yml?query=branch%3Amain)
-[![Coverage](https://codecov.io/gh/JuliaReinforcementLearning/Trajectories.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/JuliaReinforcementLearning/Trajectories.jl)
+[![Build Status](https://github.com/JuliaReinforcementLearning/ReinforcementLearningTrajectories.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/JuliaReinforcementLearning/ReinforcementLearningTrajectories.jl/actions/workflows/CI.yml?query=branch%3Amain)
+[![Coverage](https://codecov.io/gh/JuliaReinforcementLearning/ReinforcementLearningTrajectories.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/JuliaReinforcementLearning/ReinforcementLearningTrajectories.jl)
 [![PkgEval](https://JuliaCI.github.io/NanosoldierReports/pkgeval_badges/T/Trajectories.svg)](https://JuliaCI.github.io/NanosoldierReports/pkgeval_badges/report.html)
 
 ## Design
 
-A typical example of `Trajectory`:
+The relationship of several concepts provided in this package:
 
-![](https://user-images.githubusercontent.com/5612003/167291629-0e2d4f0f-7c54-460c-a94f-9eb4148cdca0.png)
-
-Exported APIs are:
-
-```julia
-push!(trajectory; [trace_name=value]...)
-append!(trajectory; [trace_name=value]...)
-
-for sample in trajectory
-    # consume samples from the trajectory
-end
+```
+┌───────────────────────────────────┐
+│ Trajectory                        │
+│ ┌───────────────────────────────┐ │
+│ │ AbstractTraces                │ │
+│ │             ┌───────────────┐ │ │
+│ │ :trace_A => │ AbstractTrace │ │ │
+│ │             └───────────────┘ │ │
+│ │                               │ │
+│ │             ┌───────────────┐ │ │
+│ │ :trace_B => │ AbstractTrace │ │ │
+│ │             └───────────────┘ │ │
+│ │  ...             ...          │ │
+│ └───────────────────────────────┘ │
+│          ┌───────────┐            │
+│          │  Sampler  │            │
+│          └───────────┘            │
+│         ┌────────────┐            │
+│         │ Controller │            │
+│         └────────────┘            │
+└───────────────────────────────────┘
 ```
 
-A wide variety of `container`s, `sampler`s, and `controler`s are provided. For the full list, please read the doc.
+## `Trajectory`
+
+A `Trajectory` contains 3 parts:
+
+- A `container` to store data. (Usually an `AbstractTraces`)
+- A `sampler` to determine how to sample a batch from `container`
+- A `controller` to decide when to sample a new batch from the `container`
+
+Typical usage:
+
+```julia
+julia> t = Trajectory(Traces(a=Int[], b=Bool[]), BatchSampler(3), InsertSampleRatioControler(1.0, 3));
+
+julia> for i in 1:5
+           push!(t, (a=i, b=iseven(i)))
+       end
+
+julia> for batch in t
+           println(batch)
+       end
+(a = [4, 5, 1], b = Bool[1, 0, 0])
+(a = [3, 2, 4], b = Bool[0, 1, 1])
+(a = [4, 1, 2], b = Bool[1, 0, 1])
+```
+
+**Traces**
+
+- `Traces`
+- `MultiplexTraces`
+- `CircularSARTTraces`
+- `Episode`
+- `Episodes`
+
+**Samplers**
+
+- `BatchSampler`
+- `MetaSampler`
+- `MultiBatchSampler`
+
+**Controllers**
+
+- `InsertSampleRatioController` 
+- `AsyncInsertSampleRatioController`
+
+
+Please refer tests for common usage. (TODO: generate docs and add links to above data structures)
 
 ## Acknowledgement
 

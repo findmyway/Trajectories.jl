@@ -1,12 +1,11 @@
 using CircularArrayBuffers
 
-const SA = (:state, :action)
-const SLA = (:state, :legal_actions_mask, :action)
+const SS = (:state, :next_state)
+const LL = (:legal_actions_mask, :next_legal_actions_mask)
+const AA = (:action, :next_action)
 const RT = (:reward, :terminal)
-const SART = (:state, :action, :reward, :terminal)
-const SARTSA = (:state, :action, :reward, :terminal, :next_state, :next_action)
-const SLART = (:state, :legal_actions_mask, :action, :reward, :terminal)
-const SLARTSLA = (:state, :legal_actions_mask, :action, :reward, :terminal, :next_state, :next_legal_actions_mask, :next_action)
+const SSAART = (SS..., AA..., RT...)
+const SSLLAART = (SS..., LL..., AA..., RT...)
 
 include("sum_tree.jl")
 include("CircularArraySARTTraces.jl")

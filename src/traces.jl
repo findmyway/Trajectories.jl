@@ -1,90 +1,339 @@
-export Trace, Traces, sample
+export Trace, Traces, MultiplexTraces, Episode, Episodes
 
-"""
-    Trace(data)
+import MacroTools: @forward
 
-A wrapper of arbitrary container. Generally we assume the `data` is an
-`AbstractVector` like object. When an `AbstractArray` is given, we view it as a
-vector of sub-arrays along the last dimension.
-"""
-struct Trace{T}
-    x::T
+#####
+
+abstract type AbstractTrace{E} <: AbstractVector{E} end
+
+Base.convert(::Type{AbstractTrace}, x::AbstractTrace) = x
+
+Base.summary(io::IO, t::AbstractTrace) = print(io, "$(length(t))-element $(nameof(typeof(t)))")
+
+#####
+struct Trace{T,E} <: AbstractTrace{E}
+    parent::T
 end
 
-Base.length(t::Trace) = length(t.x)
-Base.length(t::Trace{<:AbstractArray}) = size(t.x, ndims(t.x))
+Base.summary(io::IO, t::Trace{T}) where {T} = print(io, "$(length(t))-element $(nameof(typeof(t))){$T}")
 
-Base.lastindex(t::Trace) = length(t)
-Base.firstindex(t::Trace) = 1
+function Trace(x::T) where {T<:AbstractArray}
+    E = eltype(x)
+    N = ndims(x) - 1
+    P = typeof(x)
+    I = Tuple{ntuple(_ -> Base.Slice{Base.OneTo{Int}}, Val(ndims(x) - 1))...,Int}
+    Trace{T,SubArray{E,N,P,I,true}}(x)
+end
 
-Base.convert(::Type{Trace}, x) = Trace(x)
+Base.convert(::Type{AbstractTrace}, x::AbstractArray) = Trace(x)
 
-Base.getindex(t::Trace{<:AbstractVector}, I...) = getindex(t.x, I...)
-Base.view(t::Trace{<:AbstractVector}, I...) = view(t.x, I...)
+Base.size(x::Trace) = (size(x.parent, ndims(x.parent)),)
+Base.getindex(s::Trace, I) = Base.maybeview(s.parent, ntuple(i -> i == ndims(s.parent) ? I : (:), Val(ndims(s.parent)))...)
+Base.setindex!(s::Trace, v, I) = setindex!(s.parent, v, ntuple(i -> i == ndims(s.parent) ? I : (:), Val(ndims(s.parent)))...)
 
-Base.getindex(t::Trace{<:AbstractArray}, I...) = getindex(t.x, ntuple(_ -> :, ndims(t.x) - 1)..., I...)
-Base.view(t::Trace{<:AbstractArray}, I...) = view(t.x, ntuple(_ -> :, ndims(t.x) - 1)..., I...)
-
-Base.push!(t::Trace, x) = push!(t.x, x)
-Base.append!(t::Trace, x) = append!(t.x, x)
-
-Base.pop!(t::Trace) = pop!(t.x)
-Base.popfirst!(t::Trace) = popfirst!(t.x)
-Base.empty!(t::Trace) = empty!(t.x)
+@forward Trace.parent Base.parent, Base.pushfirst!, Base.push!, Base.append!, Base.prepend!, Base.pop!, Base.popfirst!, Base.empty!
 
 fetch(t::Trace, inds) = t[inds]
+#####
+
+"""
+For each concrete `AbstractTraces`, we have the following assumption:
+
 
 ##
+1. Every inner trace is an `AbstractVector`
+1. Support partial updating
+1. Return *View* by default when getting elements.
+"""
+abstract type AbstractTraces{names,T} <: AbstractVector{NamedTuple{names,T}} end
 
-function sample(s::BatchSampler, t::Trace)
-    inds = rand(s.rng, 1:length(t), s.batch_size)
-    t[inds] |> s.transformer
+function Base.show(io::IO, ::MIME"text/plain", t::AbstractTraces{names,T}) where {names,T}
+    s = nameof(typeof(t))
+    println(io, "$s with $(length(names)) entries:")
+    for n in names
+        println(io, "  :$n => $(summary(t[n]))")
+    end
+end
+
+Base.keys(t::AbstractTraces{names}) where {names} = names
+Base.haskey(t::AbstractTraces{names}, k::Symbol) where {names} = k in names
+
+#####
+
+"""
+    MultiplexTraces{names}(trace)
+
+A special [`AbstractTraces`](@ref) which has exactly two traces of the same
+length. And those two traces share the header and tail part.
+
+For example, if a `trace` contains elements between 0 and 9, then the first
+`trace_A` is a view of elements from 0 to 8 and the second one is a view from 1
+to 9.
+
+```
+      ┌─────trace_A───┐
+trace 0 1 2 3 4 5 6 7 8 9
+        └────trace_B────┘
+```
+
+This is quite common in RL to represent `states` and `next_states`.
+"""
+struct MultiplexTraces{names,T,E} <: AbstractTraces{names,Tuple{E,E}}
+    trace::T
+end
+
+function MultiplexTraces{names}(t) where {names}
+    if length(names) != 2
+        throw(ArgumentError("MultiplexTraces has exactly two sub traces, got $length(names) trace names"))
+    end
+    trace = convert(AbstractTrace, t)
+    MultiplexTraces{names,typeof(trace),eltype(trace)}(trace)
+end
+
+function Base.getindex(t::MultiplexTraces{names}, k::Symbol) where {names}
+    a, b = names
+    if k == a
+        convert(AbstractTrace, t.trace[1:end-1])
+    elseif k == b
+        convert(AbstractTrace, t.trace[2:end])
+    else
+        throw(ArgumentError("unknown trace name: $k"))
+    end
+end
+
+Base.getindex(t::MultiplexTraces{names}, I::Int) where {names} = NamedTuple{names}((t.trace[I], t.trace[I+1]))
+Base.getindex(t::MultiplexTraces{names}, I::AbstractArray{Int}) where {names} = NamedTuple{names}((t.trace[I], t.trace[I.+1]))
+
+Base.size(t::MultiplexTraces) = (max(0, length(t.trace) - 1),)
+
+@forward MultiplexTraces.trace Base.parent, Base.pop!, Base.popfirst!, Base.empty!
+
+for f in (:push!, :pushfirst!, :append!, :prepend!)
+    @eval function Base.$f(t::MultiplexTraces{names}, x::NamedTuple{ks,Tuple{Ts}}) where {names,ks,Ts}
+        k, v = first(ks), first(x)
+        if k in names
+            $f(t.trace, v)
+        else
+            throw(ArgumentError("unknown trace name: $k"))
+        end
+    end
 end
 
 #####
 
 """
-    Traces(;kw...)
+    Episode(traces)
 
-A container of several named-[`Trace`](@ref)s. Each element in the `kw` will be converted into a `Trace`.
+An `Episode` is a wrapper around [`Traces`](@ref). You can use `(e::Episode)[]`
+to check/update whether the episode reaches a terminal or not.
 """
-struct Traces{names,T}
-    traces::NamedTuple{names,T}
-    function Traces(; kw...)
-        traces = map(x -> convert(Trace, x), values(kw))
-        new{keys(traces),typeof(values(traces))}(traces)
+struct Episode{T,names,E} <: AbstractTraces{names,E}
+    traces::T
+    is_terminated::Ref{Bool}
+end
+
+Episode(t::AbstractTraces{names,T}) where {names,T} = Episode{typeof(t),names,T}(t, Ref(false))
+
+@forward Episode.traces Base.getindex, Base.setindex!, Base.size
+
+Base.getindex(e::Episode) = getindex(e.is_terminated)
+Base.setindex!(e::Episode, x::Bool) = setindex!(e.is_terminated, x)
+
+for f in (:push!, :append!)
+    @eval function Base.$f(t::Episode, x)
+        if t.is_terminated[]
+            throw(ArgumentError("The episode is already flagged as done!"))
+        else
+            $f(t.traces, x)
+        end
     end
 end
 
-Base.keys(t::Traces) = keys(t.traces)
-Base.haskey(t::Traces, s::Symbol) = haskey(t.traces, s)
-Base.getindex(t::Traces, x) = getindex(t.traces, x)
-Base.length(t::Traces) = mapreduce(length, min, t.traces)
+function Base.pop!(t::Episode)
+    pop!(t.traces)
+    t.is_terminated[] = false
+end
 
-Base.push!(t::Traces; kw...) = push!(t, values(kw))
+Base.pushfirst!(t::Episode, x) = pushfirst!(t.traces, x)
+Base.prepend!(t::Episode, x) = prepend!(t.traces, x)
+Base.popfirst!(t::Episode) = popfirst!(t.traces)
 
-function Base.push!(t::Traces, x::NamedTuple)
-    for k in keys(x)
-        push!(t[k], x[k])
+function Base.empty!(t::Episode)
+    empty!(t.traces)
+    t.is_terminated[] = false
+end
+
+#####
+
+"""
+    Episodes(init)
+
+A container for multiple [`Episode`](@ref)s. `init` is a parameterness function which return an empty [`Episode`](@ref).
+"""
+struct Episodes{names,E,T} <: AbstractTraces{names,E}
+    init::Any
+    episodes::Vector{T}
+    inds::Vector{Tuple{Int,Int}}
+end
+
+function Episodes(init)
+    x = init()
+    T = typeof(x)
+    @assert x isa Episode
+    @assert length(x) == 0
+    names, E = eltype(x).parameters
+    Episodes{names,E,T}(init, [x], Tuple{Int,Int}[])
+end
+
+Base.size(e::Episodes) = size(e.inds)
+
+Base.setindex!(e::Episodes, is_terminated::Bool) = setindex!(e.episodes[end], is_terminated)
+
+Base.getindex(e::Episodes) = getindex(e.episodes[end])
+
+function Base.getindex(e::Episodes, I::Int)
+    i, j = e.inds[I]
+    e.episodes[i][j]
+end
+
+function Base.getindex(e::Episodes{names}, I) where {names}
+    NamedTuple{names}(
+        lazy_stack(
+            map(I) do i
+                x, y = e.inds[i]
+                e.episodes[x][n][y]
+            end
+        )
+        for n in names
+    )
+end
+
+function Base.getindex(e::Episodes, I::Symbol)
+    @warn "The returned trace is a vector of partitions instead of a continuous view" maxlog = 1
+    map(x -> x[I], e.episodes)
+end
+
+function Base.push!(e::Episodes, x::Episode)
+    # !!! note we do not check whether the last Episode is terminated or not here
+    push!(e.episodes, x)
+    for i in 1:length(x)
+        push!(e.inds, (length(e.episodes), i))
     end
 end
 
-Base.append!(t::Traces; kw...) = append!(t, values(kw))
-
-function Base.append!(t::Traces, x::NamedTuple)
-    for k in keys(x)
-        append!(t[k], x[k])
+function Base.append!(e::Episodes, xs::AbstractVector{<:Episode})
+    # !!! note we do not check whether each Episode is terminated or not here
+    for x in xs
+        push!(e, x)
     end
 end
 
-Base.pop!(t::Traces) = map(pop!, t.traces)
-Base.popfirst!(t::Traces) = map(popfirst!, t.traces)
-Base.empty!(t::Traces) = map(empty!, t.traces)
+function Base.push!(e::Episodes, x::NamedTuple)
+    if isempty(e.episodes) || e.episodes[end][]
+        episode = e.init()
+        push!(episode, x)
+        push!(e, episode)
+    else
+        n_pre = length(e.episodes[end])
+        push!(e.episodes[end], x)
+        n_post = length(e.episodes[end])
+        # this is to support partial inserting
+        if n_post - n_pre == 1
+            push!(e.inds, (length(e.episodes), length(e.episodes[end])))
+        end
+    end
+end
 
-##
+#####
+struct Traces{names,T,N,E} <: AbstractTraces{names,E}
+    traces::T
+    inds::NamedTuple{names,NTuple{N,Int}}
+end
+
+
+function Traces(; kw...)
+    data = map(x -> convert(AbstractTrace, x), values(kw))
+    names = keys(data)
+    inds = NamedTuple(k => i for (i, k) in enumerate(names))
+    Traces{names,typeof(data),length(names),typeof(values(data))}(data, inds)
+end
+
+
+function Base.getindex(ts::Traces, s::Symbol)
+    t = ts.traces[ts.inds[s]]
+    if t isa AbstractTrace
+        t
+    else
+        t[s]
+    end
+end
+
+Base.getindex(t::Traces{names}, i) where {names} = NamedTuple{names}(map(k -> t[k][i], names))
+
+function Base.:(+)(t1::AbstractTraces{k1,T1}, t2::AbstractTraces{k2,T2}) where {k1,k2,T1,T2}
+    ks = (k1..., k2...)
+    ts = (t1, t2)
+    inds = (; (k => 1 for k in k1)..., (k => 2 for k in k2)...)
+    Traces{ks,typeof(ts),length(ks),Tuple{T1.types...,T2.types...}}(ts, inds)
+end
+
+function Base.:(+)(t1::AbstractTraces{k1,T1}, t2::Traces{k2,T,N,T2}) where {k1,T1,k2,T,N,T2}
+    ks = (k1..., k2...)
+    ts = (t1, t2.traces...)
+    inds = merge(NamedTuple(k => 1 for k in k1), map(v -> v + 1, t2.inds))
+    Traces{ks,typeof(ts),length(ks),Tuple{T1.types...,T2.types...}}(ts, inds)
+end
+
+
+function Base.:(+)(t1::Traces{k1,T,N,T1}, t2::AbstractTraces{k2,T2}) where {k1,T,N,T1,k2,T2}
+    ks = (k1..., k2...)
+    ts = (t1.traces..., t2)
+    inds = merge(t1.inds, (; (k => length(ts) for k in k2)...))
+    Traces{ks,typeof(ts),length(ks),Tuple{T1.types...,T2.types...}}(ts, inds)
+end
+
+function Base.:(+)(t1::Traces{k1,T1,N1,E1}, t2::Traces{k2,T2,N2,E2}) where {k1,T1,N1,E1,k2,T2,N2,E2}
+    ks = (k1..., k2...)
+    ts = (t1.traces..., t2.traces...)
+    inds = merge(t1.inds, map(x -> x + length(t1.traces), t2.inds))
+    Traces{ks,typeof(ts),length(ks),Tuple{E1.types...,E2.types...}}(ts, inds)
+end
+
+Base.size(t::Traces) = (mapreduce(length, min, t.traces),)
+
 function sample(s::BatchSampler, t::Traces)
     inds = rand(s.rng, 1:length(t), s.batch_size)
     map(t.traces) do x
         fetch(x, inds)
     end |> s.transformer
+end
+
+for f in (:push!, :pushfirst!)
+    @eval function Base.$f(ts::Traces, xs::NamedTuple)
+        for (k, v) in pairs(xs)
+            t = ts.traces[ts.inds[k]]
+            if t isa AbstractTrace
+                $f(t, v)
+            else
+                $f(t, (; k => v))
+            end
+        end
+    end
+end
+
+for f in (:append!, :prepend!)
+    @eval function Base.$f(ts::Traces, xs::Traces)
+        for k in keys(xs)
+            t = ts.traces[ts.inds[k]]
+            $f(t, xs[k])
+        end
+    end
+end
+
+for f in (:pop!, :popfirst!, :empty!)
+    @eval function Base.$f(ts::Traces)
+        for t in ts.traces
+            $f(t)
+        end
+    end
 end

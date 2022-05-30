@@ -1,3 +1,19 @@
+@testset "Default InsertSampleRatioController" begin
+    t = Trajectory(
+        container=Traces(
+            a=Int[],
+            b=Bool[]
+        ),
+        sampler=BatchSampler(3),
+    )
+    batches = collect(t)
+    @test length(batches) == 0
+
+    push!(t, (a=1, b=false))
+    batches = collect(t)
+    @test length(batches) == 1
+end
+
 @testset "trajectories" begin
     t = Trajectory(
         container=Traces(
@@ -5,7 +21,7 @@
             b=Bool[]
         ),
         sampler=BatchSampler(3),
-        controler=InsertSampleRatioControler(0.25, 4)
+        controller=InsertSampleRatioController(ratio=0.25, threshold=4)
     )
 
     batches = []
@@ -16,7 +32,7 @@
 
     @test length(batches) == 0  # threshold not reached yet
 
-    append!(t; a=[1, 2, 3], b=[false, true, false])
+    append!(t, Traces(a=[1, 2, 3], b=[false, true, false]))
 
     for batch in t
         push!(batches, batch)
@@ -24,7 +40,7 @@
 
     @test length(batches) == 0  # threshold not reached yet
 
-    push!(t; a=4, b=true)
+    push!(t, (a=4, b=true))
 
     for batch in t
         push!(batches, batch)
@@ -32,7 +48,7 @@
 
     @test length(batches) == 1  # 4 inserted, threshold is 4, ratio is 0.25
 
-    append!(t; a=[5, 6, 7], b=[true, true, true])
+    append!(t, Traces(a=[5, 6, 7], b=[true, true, true]))
 
     for batch in t
         push!(batches, batch)
@@ -40,7 +56,7 @@
 
     @test length(batches) == 1  # 7 inserted, threshold is 4, ratio is 0.25
 
-    push!(t; a=8, b=true)
+    push!(t, (a=8, b=true))
 
     for batch in t
         push!(batches, batch)
@@ -50,7 +66,7 @@
 
     n = 100
     for i in 1:n
-        append!(t; a=[i, i, i, i], b=[false, true, false, true])
+        append!(t, Traces(a=[i, i, i, i], b=[false, true, false, true]))
     end
 
     s = 0
@@ -69,12 +85,12 @@ end
             b=Bool[]
         ),
         sampler=BatchSampler(3),
-        controler=AsyncInsertSampleRatioControler(ratio, threshould)
+        controller=AsyncInsertSampleRatioController(ratio, threshould)
     )
 
     n = 100
     insert_task = @async for i in 1:n
-        append!(t; a=[i, i, i, i], b=[false, true, false, true])
+        append!(t, Traces(a=[i, i, i, i], b=[false, true, false, true]))
     end
 
     s = 0
