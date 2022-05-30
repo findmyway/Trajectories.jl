@@ -27,7 +27,7 @@ sample(s::BatchSampler{names}, t::AbstractTraces) where {names} = sample(s, t, n
 
 function sample(s::BatchSampler, t::AbstractTraces, names)
     inds = rand(s.rng, 1:length(t), s.batch_size)
-    NamedTuple{names}(s.transformer(t[x][inds]) for x in names)
+    NamedTuple{names}(s.transformer(fetch(t[x], inds) for x in names))
 end
 
 """

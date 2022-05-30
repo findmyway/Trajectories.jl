@@ -1,11 +1,11 @@
 import OnlineStats: OnlineStats, Group, Moments, fit!, OnlineStat, Weight, EqualWeight, mean, std
-export scalar_normalizer, array_normalizer, NormalizedTrace, Normalizer
+export scalar_normalizer, array_normalizer, NormalizedTraces, Normalizer
 import MacroTools.@forward
 
 """
     Normalizer(::OnlineStat)
 
-Wraps an OnlineStat to be used by a [`NormalizedTrajectory`](@ref).
+Wraps an OnlineStat to be used by a [`NormalizedTraces`](@ref).
 """
 struct Normalizer{OS<:OnlineStat}
     os::OS
@@ -87,25 +87,32 @@ t = Trajectory(
 )
 
 """
-struct NormalizedTrace{T <: Trace, N <: Normalizer}
-    trace::T
-    normalizer::N
+struct NormalizedTraces{T <: AbstractTraces, names, N} #<: AbstractTraces
+    traces::T
+    normalizers::NamedTuple{names, N}
+    function NormalizedTraces(traces::AbstractTraces; trace_normalizer_pairs...)
+        for key in keys(trace_normalizer_pairs)
+            @assert key in keys(traces) "Traces do not have key $key, valid keys are $(keys(traces))."
+        end
+        nt = (; trace_normalizer_pairs...)
+        new{typeof(traces), keys(nt), typeof(values(nt))}(traces, nt)
+    end
 end 
 
-NormalizedTrace(x, normalizer) = NormalizedTrace(convert(Trace, x), normalizer)
+@forward NormalizedTraces.traces Base.length, Base.lastindex, Base.firstindex, Base.getindex, Base.view, Base.pop!, Base.popfirst!, Base.empty!, Base.prepend!, Base.pushfirst!
 
-@forward NormalizedTrace.trace Base.length, Base.lastindex, Base.firstindex, Base.getindex, Base.view, Base.pop!, Base.popfirst!, Base.empty!
-
-Base.convert(::Type{Trace}, x::NormalizedTrace) = x #ignore conversion to Trace
-
-function Base.push!(nt::NormalizedTrace, x)
-    fit!(nt.normalizer, x)
-    push!(nt.trace, x)
+function Base.push!(nt::NormalizedTraces, x)
+    for key in intersect(keys(nt.normalizers), keys(x))
+        fit!(nt.normalizers[key], x[key])
+    end
+    push!(nt.traces, x)
 end
 
-function Base.append!(nt::NormalizedTrace, x)
-    fit!(nt.normalizer, x)
-    append!(nt.trace, x)
+function Base.append!(nt::NormalizedTraces, x)
+    for key in intersect(keys(nt.normalizers), keys(x))
+        fit!(nt.normalizers[key], x[key])
+    end
+    append!(nt.traces, x)
 end
 
 """
@@ -149,12 +156,22 @@ function normalize(os::Group{<:AbstractVector{<:Moments}}, x::AbstractVector{<:A
     return xn
 end
 
-function fetch(nt::NormalizedTrace, inds)
-    batch = fetch(nt.trace, inds)
-    normalize(nt.normalizer.os, batch)
+function fetch(nt::NormalizedTraces, inds)
+    batch = fetch(nt.traces, inds)
+    return (; (key => (key in keys(nt.normalizers) ? normalize(nt.normalizers[key].os, data) : data) for (key, data) in pairs(batch))...)
 end
 
-function sample(s, nt::NormalizedTrace)
-    batch = sample(s, nt.trace)
-    normalize(nt.normalizer.os, batch)
+#=
+abstract type AbstractFoo{T} end
+
+struct Foo{T} <: AbstractFoo{T}
+    x::T
 end
+
+struct Baz{F <: Foo} <: supertype(Type(F))
+    foo::F
+end
+
+struct Bal{F <: AbstractFoo{T where T}} <: AbstractFoo{T} 
+    foo::F{T}
+end=#

@@ -33,14 +33,12 @@ Base.setindex!(s::Trace, v, I) = setindex!(s.parent, v, ntuple(i -> i == ndims(s
 
 @forward Trace.parent Base.parent, Base.pushfirst!, Base.push!, Base.append!, Base.prepend!, Base.pop!, Base.popfirst!, Base.empty!
 
-fetch(t::Trace, inds) = t[inds]
+fetch(t::AbstractTrace, inds) = t[inds]
 #####
 
 """
 For each concrete `AbstractTraces`, we have the following assumption:
 
-
-##
 1. Every inner trace is an `AbstractVector`
 1. Support partial updating
 1. Return *View* by default when getting elements.
@@ -58,6 +56,8 @@ end
 Base.keys(t::AbstractTraces{names}) where {names} = names
 Base.haskey(t::AbstractTraces{names}, k::Symbol) where {names} = k in names
 
+#use fetch instead of getindex when sampling to retain compatibility
+fetch(t::AbstractTraces, inds) = t[inds]
 #####
 
 """
@@ -84,7 +84,7 @@ end
 
 function MultiplexTraces{names}(t) where {names}
     if length(names) != 2
-        throw(ArgumentError("MultiplexTraces has exactly two sub traces, got $length(names) trace names"))
+        throw(ArgumentError("MultiplexTraces has exactly two sub traces, got $(length(names)) trace names"))
     end
     trace = convert(AbstractTrace, t)
     MultiplexTraces{names,typeof(trace),eltype(trace)}(trace)
@@ -300,13 +300,6 @@ function Base.:(+)(t1::Traces{k1,T1,N1,E1}, t2::Traces{k2,T2,N2,E2}) where {k1,T
 end
 
 Base.size(t::Traces) = (mapreduce(length, min, t.traces),)
-
-function sample(s::BatchSampler, t::Traces)
-    inds = rand(s.rng, 1:length(t), s.batch_size)
-    map(t.traces) do x
-        fetch(x, inds)
-    end |> s.transformer
-end
 
 for f in (:push!, :pushfirst!)
     @eval function Base.$f(ts::Traces, xs::NamedTuple)
