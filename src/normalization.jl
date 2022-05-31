@@ -60,8 +60,10 @@ end
 """
     normalize(os::Group{<:AbstractVector{<:Moments}}, x)
 
-Given an os::Group{<:Tuple{Moments}}, that is, a multivariate estimator of the moments of each element of x,
-normalizes each element of x to zero mean, and unit variance. Treats the last dimension as a batch dimension if `ndims(x) >= 2`.
+Given an os::Group{<:Tuple{Moments}}, that is, a multivariate estimator of the moments of 
+each element of x,
+normalizes each element of x to zero mean, and unit variance. Treats the last dimension as 
+a batch dimension if `ndims(x) >= 2`.
 """
 function normalize(os::Group{<:AbstractVector{<:Moments}}, x::AbstractVector)
     T = eltype(x)
@@ -89,8 +91,10 @@ end
 """
     scalar_normalizer(;weights = OnlineStats.EqualWeight())
 
-Returns preconfigured normalizer for scalar traces such as rewards. By default, all samples have equal weights in the computation of the moments.
-See the [OnlineStats documentation](https://joshday.github.io/OnlineStats.jl/stable/weights/) to use variants such as exponential weights to favor the most recent observations.
+Returns preconfigured normalizer for scalar traces such as rewards. By default, all samples 
+have equal weights in the computation of the moments.
+See the [OnlineStats documentation](https://joshday.github.io/OnlineStats.jl/stable/weights/) 
+to use variants such as exponential weights to favor the most recent observations.
 """
 scalar_normalizer(; weight::Weight = EqualWeight()) = Normalizer(Moments(weight = weight))
 
@@ -98,32 +102,40 @@ scalar_normalizer(; weight::Weight = EqualWeight()) = Normalizer(Moments(weight 
     array_normalizer(size::Tuple{Int}; weights = OnlineStats.EqualWeight())
 
 Returns preconfigured normalizer for array traces such as vector or matrix states. 
-`size` is a tuple containing the dimension sizes of a state. E.g. `(10,)` for a 10-elements vector, or `(252,252)` for a square image.
+`size` is a tuple containing the dimension sizes of a state. E.g. `(10,)` for a 10-elements
+vector, or `(252,252)` for a square image.
 By default, all samples have equal weights in the computation of the moments.
-See the [OnlineStats documentation](https://joshday.github.io/OnlineStats.jl/stable/weights/) to use variants such as exponential weights to favor the most recent observations.
+See the [OnlineStats documentation](https://joshday.github.io/OnlineStats.jl/stable/weights/) 
+to use variants such as exponential weights to favor the most recent observations.
 """
 array_normalizer(size::NTuple{N,Int}; weight::Weight = EqualWeight()) where N = Normalizer(Group([Moments(weight = weight) for _ in 1:prod(size)]))
 
 """
-    NormalizedTrace(trace::Trace, normalizer::Normalizer)
+    NormalizedTraces(traces::AbstractTraces, normalizers::NamedTuple)
+    NormalizedTraces(traces::AbstractTraces; trace_normalizer_pairs...)
 
-Wraps a [`Trace`](@ref) and a [`Normalizer`](@ref). When pushing new elements to the trace, a `NormalizedTrace` will first update a running estimate of the moments of that trace.
-When sampling a normalized trace, it will first normalize the samples using to zero mean and unit variance.
+Wraps an [`AbstractTraces`](@ref) and a `NamedTuple` of `Symbol` => [`Normalizer`](@ref) 
+pairs. 
+When pushing new elements to the traces, a `NormalizedTraces` will first update a running 
+estimate of the moments of traces present in the keys of `normalizers`.
+When sampling a normalized trace, it will first normalize the samples to zero mean and unit 
+variance. Traces that do not have a normalizer are sample as usual.
 
-preconfigured normalizers are provided for scalar (see [`scalar_normalizer`](@ref)) and arrays (see [`array_normalizer`](@ref))
+Note that when used in combination with [`Episodes`](@ref), `NormalizedTraces` must wrap 
+the `Episodes` struct, not the inner `AbstractTraces` contained in an `Episode`, otherwise
 
-#Example
-t = Trajectory(
-    container=Traces(
-        a_scalar_trace = NormalizedTrace(Float32[], scalar_normalizer()),
-        a_non_normalized_trace=Bool[],
-        a_vector_trace = NormalizedTrace(Vector{Float32}[], array_normalizer((10,))),
-        a_matrix_trace = NormalizedTrace(Matrix{Float32}[], array_normalizer((252,252), weight = OnlineStats.ExponientialWeight(0.9f0)))
-    ),
-    sampler=BatchSampler(3),
-    controler=InsertSampleRatioControler(0.25, 4)
+Preconfigured normalizers are provided for scalar (see [`scalar_normalizer`](@ref)) and 
+arrays (see [`array_normalizer`](@ref)).
+
+# Examples
+```
+t = CircularArraySARTTraces(capacity = 10, state = Float64 => (5,))
+nt = NormalizedTraces(t, reward = scalar_normalizer(), state = array_normalizer((5,)))
+traj = Trajectory(
+    container = nt,
+    sampler = BatchSampler(10)
 )
-
+```
 """
 struct NormalizedTraces{names, TT, T <: AbstractTraces{names, TT}, normnames, N} <: AbstractTraces{names, TT}
     traces::T
