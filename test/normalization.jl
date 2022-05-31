@@ -3,7 +3,7 @@ using ReinforcementLearningTrajectories
 import ReinforcementLearningTrajectories: sample
 import OnlineStats: mean, std
 
-#@testset "normalization.jl" begin
+@testset "normalization.jl" begin
     t = CircularArraySARTTraces(capacity = 10, state = Float64 => (5,))
     nt = NormalizedTraces(t, reward = scalar_normalizer(), state = array_normalizer((5,)))
     m = mean(0:4)
