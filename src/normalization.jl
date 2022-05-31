@@ -138,6 +138,19 @@ function NormalizedTraces(traces::AbstractTraces{names, TT}; trace_normalizer_pa
     NormalizedTraces{names, TT, typeof(traces), keys(nt), typeof(values(nt))}(traces, nt)
 end
 
+function Base.show(io::IO, ::MIME"text/plain", t::NormalizedTraces{names,T}) where {names,T}
+    s = nameof(typeof(t))
+    println(io, "$s with $(length(names)) entries:")
+    for n in names
+        print(io, "  :$n => $(summary(t[n]))")
+        if n in keys(t.normalizers)
+            println(io, " => Normalized")
+        else
+            println(io, "")
+        end
+    end
+end
+
 @forward NormalizedTraces.traces Base.length, Base.size, Base.lastindex, Base.firstindex, Base.getindex, Base.view, Base.pop!, Base.popfirst!, Base.empty!, Base.parent
 
 for f in (:push!, :pushfirst!, :append!, :prepend!)

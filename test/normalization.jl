@@ -37,5 +37,4 @@ import OnlineStats: mean, std
     unnormalized_batch = t[[1:5;]]
     @test unnormalized_batch[:reward] == [0:4;]
     @test extrema(unnormalized_batch[:state]) == (0, 4)                     
-
 end
