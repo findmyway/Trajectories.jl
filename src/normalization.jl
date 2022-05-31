@@ -122,7 +122,11 @@ When sampling a normalized trace, it will first normalize the samples to zero me
 variance. Traces that do not have a normalizer are sample as usual.
 
 Note that when used in combination with [`Episodes`](@ref), `NormalizedTraces` must wrap 
-the `Episodes` struct, not the inner `AbstractTraces` contained in an `Episode`, otherwise
+the `Episodes` struct, not the inner `AbstractTraces` contained in an `Episode`, otherwise 
+the running estimate will reset after each episode.
+
+When used with a MultiplexTraces, the normalizer used with for one symbol (e.g. :state) will
+be the same used for the other one (e.g. :next_state).
 
 Preconfigured normalizers are provided for scalar (see [`scalar_normalizer`](@ref)) and 
 arrays (see [`array_normalizer`](@ref)).
@@ -131,6 +135,7 @@ arrays (see [`array_normalizer`](@ref)).
 ```
 t = CircularArraySARTTraces(capacity = 10, state = Float64 => (5,))
 nt = NormalizedTraces(t, reward = scalar_normalizer(), state = array_normalizer((5,)))
+# :next_state will also be normalized. 
 traj = Trajectory(
     container = nt,
     sampler = BatchSampler(10)
@@ -147,6 +152,18 @@ function NormalizedTraces(traces::AbstractTraces{names, TT}; trace_normalizer_pa
         @assert key in keys(traces) "Traces do not have key $key, valid keys are $(keys(traces))."
     end
     nt = (; trace_normalizer_pairs...)
+    for trace in traces.traces
+        #check if all traces of MultiplexTraces are in pairs
+        if trace isa MultiplexTraces
+            if length(intersect(keys(trace), keys(trace_normalizer_pairs))) in [0, length(keys(trace))] #check if none or all keys are in normalizers
+                continue
+            else #if not then one is missing
+                present_key = only(intersect(keys(trace), keys(trace_normalizer_pairs)))
+                absent_key = only(setdiff(keys(trace), keys(trace_normalizer_pairs)))
+                nt = merge(nt, (;(absent_key => nt[present_key],)...)) #assign the same normalizer
+            end
+        end
+    end
     NormalizedTraces{names, TT, typeof(traces), keys(nt), typeof(values(nt))}(traces, nt)
 end
 
