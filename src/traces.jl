@@ -33,7 +33,6 @@ Base.setindex!(s::Trace, v, I) = setindex!(s.parent, v, ntuple(i -> i == ndims(s
 
 @forward Trace.parent Base.parent, Base.pushfirst!, Base.push!, Base.append!, Base.prepend!, Base.pop!, Base.popfirst!, Base.empty!
 
-fetch(t::AbstractTrace, inds) = t[inds]
 #####
 
 """
@@ -56,8 +55,6 @@ end
 Base.keys(t::AbstractTraces{names}) where {names} = names
 Base.haskey(t::AbstractTraces{names}, k::Symbol) where {names} = k in names
 
-#use fetch instead of getindex when sampling to retain compatibility
-fetch(t::AbstractTraces, inds) = t[inds]
 #####
 
 """
