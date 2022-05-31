@@ -12,8 +12,10 @@ end
 
 """
     BatchSampler{names}(;batch_size, rng=Random.GLOBAL_RNG, transformer=identity)
+    BatchSampler{names}(batch_size ;rng=Random.GLOBAL_RNG, transformer=identity)
 
-Uniformly sample a batch of examples for each trace specified in `names`. By default, all the traces will be sampled.
+Uniformly sample a batch of examples for each trace specified in `names`. 
+By default, all the traces will be sampled.
 
 See also [`sample`](@ref).
 """
@@ -33,12 +35,14 @@ end
 """
     MetaSampler(::NamedTuple)
 
-Wraps a NamedTuple containing multiple samplers. When sampled, returns a named tuple with a batch from each sampler.
+Wraps a NamedTuple containing multiple samplers. When sampled, returns a named tuple with a 
+batch from each sampler.
 Used internally for algorithms that sample multiple times per epoch.
 
 # Example
-
+```
 MetaSampler(policy = BatchSampler(10), critic = BatchSampler(100))
+```
 """
 struct MetaSampler{names,T} <: AbstractSampler
     samplers::NamedTuple{names,T}
@@ -52,11 +56,14 @@ sample(s::MetaSampler, t) = map(x -> sample(x, t), s.samplers)
 """
     MultiBatchSampler(sampler, n)
 
-Wraps a sampler. When sampled, will sample n batches using sampler. Useful in combination with MetaSampler to allow different sampling rates between samplers.
+Wraps a sampler. When sampled, will sample n batches using sampler. Useful in combination 
+with MetaSampler to allow different sampling rates between samplers.
 
 # Example
-
-MetaSampler(policy = MultiBatchSampler(BatchSampler(10), 3), critic = MultiBatchSampler(BatchSampler(100), 5))
+```
+MetaSampler(policy = MultiBatchSampler(BatchSampler(10), 3), 
+            critic = MultiBatchSampler(BatchSampler(100), 5))
+```
 """
 struct MultiBatchSampler{S<:AbstractSampler} <: AbstractSampler
     sampler::S
