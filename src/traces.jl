@@ -81,7 +81,7 @@ end
 
 function MultiplexTraces{names}(t) where {names}
     if length(names) != 2
-        throw(ArgumentError("MultiplexTraces has exactly two sub traces, got $length(names) trace names"))
+        throw(ArgumentError("MultiplexTraces has exactly two sub traces, got $(length(names)) trace names"))
     end
     trace = convert(AbstractTrace, t)
     MultiplexTraces{names,typeof(trace),eltype(trace)}(trace)
