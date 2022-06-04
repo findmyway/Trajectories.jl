@@ -10,7 +10,7 @@ the number of samplings.
 Base.@kwdef mutable struct InsertSampleRatioController
     ratio::Float64 = 1.0
     threshold::Int = 1
-    n_inserted::Int = 0
+    n_inserted::Int = -1
     n_sampled::Int = 0
 end
 
