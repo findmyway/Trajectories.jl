@@ -24,10 +24,11 @@ Base.@kwdef struct Trajectory{C,S,T}
     container::C
     sampler::S
     controller::T = InsertSampleRatioController()
+    transformer::Any = identity
 
-    Trajectory(c::C, s::S, t::T=InsertSampleRatioController()) where {C,S,T} = new{C,S,T}(c, s, t)
+    Trajectory(c::C, s::S, t::T=InsertSampleRatioController(), f=identity) where {C,S,T} = new{C,S,T}(c, s, t, f)
 
-    function Trajectory(container::C, sampler::S, controller::T) where {C,S,T<:AsyncInsertSampleRatioController}
+    function Trajectory(container::C, sampler::S, controller::T, transformer) where {C,S,T<:AsyncInsertSampleRatioController}
         t = Threads.@spawn while true
             for msg in controller.ch_in
                 if msg.f === Base.push!
@@ -54,7 +55,7 @@ Base.@kwdef struct Trajectory{C,S,T}
 
         bind(controller.ch_in, t)
         bind(controller.ch_out, t)
-        new{C,S,T}(container, sampler, controller)
+        new{C,S,T}(container, sampler, controller, transformer)
     end
 end
 
@@ -97,7 +98,7 @@ function Base.take!(t::Trajectory)
     if isnothing(res)
         nothing
     else
-        sample(t.sampler, t.container)
+        sample(t.sampler, t.container) |> t.transformer
     end
 end
 
