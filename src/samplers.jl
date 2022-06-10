@@ -91,22 +91,16 @@ sample(m::MultiBatchSampler, t) = [sample(m.sampler, t) for _ in 1:m.n]
 
 export NStepBatchSampler
 
-Base.@kwdef mutable struct NStepBatchSampler{traces}
+mutable struct NStepBatchSampler{traces}
     n::Int # !!! n starts from 1
     γ::Float32
-    batch_size::Int = 32
-    stack_size::Union{Nothing,Int} = nothing
-    rng::Any = Random.GLOBAL_RNG
+    batch_size::Int
+    stack_size::Union{Nothing,Int}
+    rng::Any
 end
 
-select_last_dim(xs::AbstractArray{T,N}, inds) where {T,N} = @views xs[ntuple(_ -> (:), Val(N - 1))..., inds]
-select_last_frame(xs::AbstractArray{T,N}) where {T,N} = select_last_dim(xs, size(xs, N))
-
-consecutive_view(cb, inds; n_stack=nothing, n_horizon=nothing) = consecutive_view(cb, inds, n_stack, n_horizon)
-consecutive_view(cb, inds, ::Nothing, ::Nothing) = select_last_dim(cb, inds)
-consecutive_view(cb, inds, n_stack::Int, ::Nothing) = select_last_dim(cb, [x + i for i in -n_stack+1:0, x in inds])
-consecutive_view(cb, inds, ::Nothing, n_horizon::Int) = select_last_dim(cb, [x + j for j in 0:n_horizon-1, x in inds])
-consecutive_view(cb, inds, n_stack::Int, n_horizon::Int) = select_last_dim(cb, [x + i + j for i in -n_stack+1:0, j in 0:n_horizon-1, x in inds])
+NStepBatchSampler(; kw...) = NStepBatchSampler{SSART}(; kw...)
+NStepBatchSampler{names}(; n, γ, batch_size=32, stack_size=nothing, rng=Random.GLOBAL_RNG) where {names} = NStepBatchSampler{names}(n, γ, batch_size, stack_size, rng)
 
 function sample(s::NStepBatchSampler{names}, ts) where {names}
     valid_range = isnothing(s.stack_size) ? (1:(length(ts)-s.n+1)) : (s.stack_size:(length(ts)-s.n+1))# think about the exteme case where s.stack_size == 1 and s.n == 1
@@ -114,26 +108,32 @@ function sample(s::NStepBatchSampler{names}, ts) where {names}
     sample(s, ts, Val(names), inds)
 end
 
-function sample(s::NStepBatchSampler, ts, ::Val{SSART}, inds)
-    s = consecutive_view(ts[:state], inds; n_stack=s.stack_size)
-    s′ = consecutive_view(ts[:next_state], inds .+ (s.n - 1); n_stack=s.stack_size)
-    a = consecutive_view(ts[:action], inds)
-    t_horizon = consecutive_view(ts[:terminal], inds; n_horizon=s.n)
-    r_horizon = consecutive_view(ts[:reward], inds; n_horizon=s.n)
+function sample(nbs::NStepBatchSampler, ts, ::Val{SSART}, inds)
+    if isnothing(nbs.stack_size)
+        s = ts[:state][inds]
+        s′ = ts[:next_state][inds.+(nbs.n-1)]
+    else
+        s = ts[:state][[x + i for i in -nbs.stack_size+1:0, x in inds]]
+        s′ = ts[:next_state][[x + nbs.n - 1 + i for i in -nbs.stack_size+1:0, x in inds]]
+    end
+
+    a = ts[:action][inds]
+    t_horizon = ts[:terminal][[x + j for j in 0:nbs.n-1, x in inds]]
+    r_horizon = ts[:reward][[x + j for j in 0:nbs.n-1, x in inds]]
 
     @assert ndims(t_horizon) == 2
-    t = any(t_horizon, dims=1)
+    t = any(t_horizon, dims=1) |> vec
 
     @assert ndims(r_horizon) == 2
     r = map(eachcol(r_horizon), eachcol(t_horizon)) do r⃗, t⃗
-        foldr((init, (rr, tt)) -> rr + f.γ * init * (1 - tt), zip(r⃗, t⃗); init=0.0f0)
+        foldr(((rr, tt), init) -> rr + nbs.γ * init * (1 - tt), zip(r⃗, t⃗); init=0.0f0)
     end
 
-    NamedTuple{names}(s, s′, a, r, t)
+    NamedTuple{SSART}((s, s′, a, r, t))
 end
 
 function sample(s::NStepBatchSampler, ts, ::Val{SSLART}, inds)
-    s, s′, a, r, t = sample(s, ts, Val(SSART), inds),
+    s, s′, a, r, t = sample(s, ts, Val(SSART), inds)
     l = consecutive_view(ts[:legal_actions_mask], inds)
-    NamedTuple{SSLART}(s, s′, l, a, r, t)
+    NamedTuple{SSLART}((s, s′, l, a, r, t))
 end
