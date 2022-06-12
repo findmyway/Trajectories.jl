@@ -99,7 +99,7 @@ mutable struct NStepBatchSampler{traces}
     rng::Any
 end
 
-NStepBatchSampler(; kw...) = NStepBatchSampler{SSART}(; kw...)
+NStepBatchSampler(; kw...) = NStepBatchSampler{SS′ART}(; kw...)
 NStepBatchSampler{names}(; n, γ, batch_size=32, stack_size=nothing, rng=Random.GLOBAL_RNG) where {names} = NStepBatchSampler{names}(n, γ, batch_size, stack_size, rng)
 
 function sample(s::NStepBatchSampler{names}, ts) where {names}

@@ -106,7 +106,7 @@ end
     @test size(xs2.terminal) == (batch_size,)
 
     inds = [3, 5, 7]
-    xs3 = RLTrajectories.sample(s1, t2, Val(SSART), inds)
+    xs3 = RLTrajectories.sample(s1, t2, Val(SS′ART), inds)
 
     @test xs3.state == cat(
         (
