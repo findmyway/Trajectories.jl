@@ -1,11 +1,11 @@
 export CircularArraySLARTTraces
 
 const CircularArraySLARTTraces = Traces{
-    SSLLAART,
+    SS′LL′AA′RT,
     <:Tuple{
-        <:MultiplexTraces{SS,<:Trace{<:CircularArrayBuffer}},
-        <:MultiplexTraces{LL,<:Trace{<:CircularArrayBuffer}},
-        <:MultiplexTraces{AA,<:Trace{<:CircularArrayBuffer}},
+        <:MultiplexTraces{SS′,<:Trace{<:CircularArrayBuffer}},
+        <:MultiplexTraces{LL′,<:Trace{<:CircularArrayBuffer}},
+        <:MultiplexTraces{AA′,<:Trace{<:CircularArrayBuffer}},
         <:Trace{<:CircularArrayBuffer},
         <:Trace{<:CircularArrayBuffer},
     }
@@ -25,9 +25,9 @@ function CircularArraySLARTTraces(;
     reward_eltype, reward_size = reward
     terminal_eltype, terminal_size = terminal
 
-    MultiplexTraces{SS}(CircularArrayBuffer{state_eltype}(state_size..., capacity + 1)) +
-    MultiplexTraces{LL}(CircularArrayBuffer{legal_actions_mask_eltype}(legal_actions_mask_size..., capacity + 1)) +
-    MultiplexTraces{AA}(CircularArrayBuffer{action_eltype}(action_size..., capacity + 1)) +
+    MultiplexTraces{SS′}(CircularArrayBuffer{state_eltype}(state_size..., capacity + 1)) +
+    MultiplexTraces{LL′}(CircularArrayBuffer{legal_actions_mask_eltype}(legal_actions_mask_size..., capacity + 1)) +
+    MultiplexTraces{AA′}(CircularArrayBuffer{action_eltype}(action_size..., capacity + 1)) +
     Traces(
         reward=CircularArrayBuffer{reward_eltype}(reward_size..., capacity),
         terminal=CircularArrayBuffer{terminal_eltype}(terminal_size..., capacity),

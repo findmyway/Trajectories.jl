@@ -31,7 +31,7 @@ sample(s::BatchSampler{names}, t::AbstractTraces) where {names} = sample(s, t, n
 
 function sample(s::BatchSampler, t::AbstractTraces, names)
     inds = rand(s.rng, 1:length(t), s.batch_size)
-    NamedTuple{names}(t[x][inds] for x in names)
+    NamedTuple{names}(map(x -> t[x][inds], names))
 end
 
 #####
@@ -99,7 +99,7 @@ mutable struct NStepBatchSampler{traces}
     rng::Any
 end
 
-NStepBatchSampler(; kw...) = NStepBatchSampler{SSART}(; kw...)
+NStepBatchSampler(; kw...) = NStepBatchSampler{SS′ART}(; kw...)
 NStepBatchSampler{names}(; n, γ, batch_size=32, stack_size=nothing, rng=Random.GLOBAL_RNG) where {names} = NStepBatchSampler{names}(n, γ, batch_size, stack_size, rng)
 
 function sample(s::NStepBatchSampler{names}, ts) where {names}
@@ -108,7 +108,7 @@ function sample(s::NStepBatchSampler{names}, ts) where {names}
     sample(s, ts, Val(names), inds)
 end
 
-function sample(nbs::NStepBatchSampler, ts, ::Val{SSART}, inds)
+function sample(nbs::NStepBatchSampler, ts, ::Val{SS′ART}, inds)
     if isnothing(nbs.stack_size)
         s = ts[:state][inds]
         s′ = ts[:next_state][inds.+(nbs.n-1)]
@@ -129,11 +129,11 @@ function sample(nbs::NStepBatchSampler, ts, ::Val{SSART}, inds)
         foldr(((rr, tt), init) -> rr + nbs.γ * init * (1 - tt), zip(r⃗, t⃗); init=0.0f0)
     end
 
-    NamedTuple{SSART}((s, s′, a, r, t))
+    NamedTuple{SS′ART}((s, s′, a, r, t))
 end
 
-function sample(s::NStepBatchSampler, ts, ::Val{SSLART}, inds)
+function sample(s::NStepBatchSampler, ts, ::Val{SS′L′ART}, inds)
     s, s′, a, r, t = sample(s, ts, Val(SSART), inds)
-    l = consecutive_view(ts[:legal_actions_mask], inds)
+    l = consecutive_view(ts[:next_legal_actions_mask], inds)
     NamedTuple{SSLART}((s, s′, l, a, r, t))
 end
