@@ -35,6 +35,15 @@ function sample(s::BatchSampler, t::AbstractTraces, names)
 end
 
 #####
+
+sample(s::BatchSampler{nothing}, t::CircularPrioritizedTraces) = sample(s, t, keys(t.traces))
+
+function sample(s::BatchSampler, t::CircularPrioritizedTraces, names)
+    inds, priorities = rand(s.rng, t.priorities, s.batch_size)
+    NamedTuple{(:key, :priority, names...)}((t.keys[inds], priorities, map(x -> t.traces[x][inds], names)...))
+end
+
+#####
 # MetaSampler
 #####
 

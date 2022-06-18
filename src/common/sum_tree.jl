@@ -2,6 +2,8 @@ export SumTree
 
 using Random
 
+import CircularArrayBuffers
+
 """
     SumTree(capacity::Int)
 Efficiently sample and update weights.
@@ -69,7 +71,7 @@ mutable struct SumTree{T} <: AbstractVector{Int}
     end
 end
 
-capacity(t::SumTree) = t.capacity
+CircularArrayBuffers.capacity(t::SumTree) = t.capacity
 Base.length(t::SumTree) = t.length
 Base.size(t::SumTree) = (length(t),)
 Base.eltype(t::SumTree{T}) where {T} = T

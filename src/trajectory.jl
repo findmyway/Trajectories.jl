@@ -76,6 +76,8 @@ function Base.push!(t::Trajectory, x)
     on_insert!(t.controller, 1)
 end
 
+Base.setindex!(t::Trajectory, v, k) = setindex!(t.container, v, k)
+
 struct CallMsg
     f::Any
     args::Tuple
@@ -84,6 +86,7 @@ end
 
 Base.push!(t::Trajectory{<:Any,<:Any,<:AsyncInsertSampleRatioController}, x) = put!(t.controller.ch_in, CallMsg(Base.push!, (x,), NamedTuple()))
 Base.append!(t::Trajectory{<:Any,<:Any,<:AsyncInsertSampleRatioController}, x) = put!(t.controller.ch_in, CallMsg(Base.append!, (x,), NamedTuple()))
+Base.setindex!(t::Trajectory{<:Any,<:Any,<:AsyncInsertSampleRatioController}, v, I...) = put!(t.controller.ch_in, CallMsg(Base.setindex!, (v, I...), NamedTuple()))
 
 function Base.append!(t::Trajectory, x)
     append!(t.container, x)
