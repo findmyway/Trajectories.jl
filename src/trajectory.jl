@@ -76,7 +76,7 @@ function Base.push!(t::Trajectory, x)
     on_insert!(t.controller, 1)
 end
 
-Base.setindex!(t::Trajectory, v, k) = setindex!(t.container, v, k)
+Base.setindex!(t::Trajectory, v, I...) = setindex!(t.container, v, I...)
 
 struct CallMsg
     f::Any

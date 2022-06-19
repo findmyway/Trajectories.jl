@@ -146,3 +146,11 @@ function sample(s::NStepBatchSampler, ts, ::Val{SS′L′ART}, inds)
     l = consecutive_view(ts[:next_legal_actions_mask], inds)
     NamedTuple{SSLART}((s, s′, l, a, r, t))
 end
+
+function sample(s::NStepBatchSampler{names}, t::CircularPrioritizedTraces) where {names}
+    inds, priorities = rand(s.rng, t.priorities, s.batch_size)
+    merge(
+        (key=t.keys[inds], priority=priorities),
+        sample(s, t.traces, Val(names), inds)
+    )
+end
