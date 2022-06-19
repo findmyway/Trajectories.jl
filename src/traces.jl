@@ -2,6 +2,8 @@ export Trace, Traces, MultiplexTraces, Episode, Episodes
 
 import MacroTools: @forward
 
+import CircularArrayBuffers
+
 #####
 
 abstract type AbstractTrace{E} <: AbstractVector{E} end
@@ -31,7 +33,7 @@ Base.size(x::Trace) = (size(x.parent, ndims(x.parent)),)
 Base.getindex(s::Trace, I) = Base.maybeview(s.parent, ntuple(i -> i == ndims(s.parent) ? I : (:), Val(ndims(s.parent)))...)
 Base.setindex!(s::Trace, v, I) = setindex!(s.parent, v, ntuple(i -> i == ndims(s.parent) ? I : (:), Val(ndims(s.parent)))...)
 
-@forward Trace.parent Base.parent, Base.pushfirst!, Base.push!, Base.append!, Base.prepend!, Base.pop!, Base.popfirst!, Base.empty!
+@forward Trace.parent Base.parent, Base.pushfirst!, Base.push!, Base.append!, Base.prepend!, Base.pop!, Base.popfirst!, Base.empty!, CircularArrayBuffers.capacity
 
 #####
 

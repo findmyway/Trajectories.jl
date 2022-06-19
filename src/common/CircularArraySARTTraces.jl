@@ -1,5 +1,7 @@
 export CircularArraySARTTraces
 
+import CircularArrayBuffers
+
 const CircularArraySARTTraces = Traces{
     SS′AA′RT,
     <:Tuple{
@@ -29,3 +31,5 @@ function CircularArraySARTTraces(;
         terminal=CircularArrayBuffer{terminal_eltype}(terminal_size..., capacity),
     )
 end
+
+CircularArrayBuffers.capacity(t::CircularArraySARTTraces) = CircularArrayBuffers.capacity(t.traces[end])

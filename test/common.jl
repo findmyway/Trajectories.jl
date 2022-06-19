@@ -103,3 +103,35 @@ end
 
     @test t isa CircularArraySLARTTraces
 end
+
+@testset "CircularPrioritizedTraces" begin
+    t = CircularPrioritizedTraces(
+        CircularArraySARTTraces(;
+            capacity=3
+        ),
+        default_priority=1.0f0
+    )
+
+    push!(t, (state=0, action=0))
+
+    for i in 1:5
+        push!(t, (reward=1.0f0, terminal=false, state=i, action=i))
+    end
+
+    @test length(t) == 3
+
+    s = BatchSampler(5)
+
+    b = ReinforcementLearningTrajectories.sample(s, t)
+
+    t[:priority, [1, 2]] = [0, 0]
+
+    # shouldn't be changed since [1,2] are old keys
+    @test t[:priority] == [1.0f0, 1.0f0, 1.0f0]
+
+    t[:priority, [3, 4, 5]] = [0, 1, 0]
+
+    b = ReinforcementLearningTrajectories.sample(s, t)
+
+    @test b.key == [4, 4, 4, 4, 4] # the priority of the rest transitions are set to 0
+end
