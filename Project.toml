@@ -13,7 +13,6 @@ StackViews = "cae243ae-269e-4f55-b966-ac2d0dc13c15"
 [compat]
 CircularArrayBuffers = "0.1"
 MacroTools = "0.5"
-OnlineStats = "1.0"
 StackViews = "0.1"
 julia = "1.6"
 OnlineStats = "1"
