@@ -161,3 +161,12 @@ function sample(s::NStepBatchSampler{names}, t::CircularPrioritizedTraces) where
         sample(s, t.traces, Val(names), inds)
     )
 end
+
+#####
+
+export DummySampler
+
+"Simply return the original traces"
+struct DummySampler end
+
+sample(s::DummySampler, t::AbstractTraces) = t
