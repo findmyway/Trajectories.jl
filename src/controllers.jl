@@ -58,11 +58,3 @@ function AsyncInsertSampleRatioController(
         Channel(ch_out_sz)
     )
 end
-
-#####
-
-export SampleOnEpisodeEndController
-
-struct SampleOnEpisodeEndController end
-
-function on_insert!(c::SampleOnEpisodeEndController, args...) end

@@ -96,6 +96,8 @@ end
 # !!! bypass the controller
 sample(t::Trajectory) = sample(t.sampler, t.container)
 
+on_sample!(t::Trajectory) = on_sample!(t.controller)
+
 function Base.take!(t::Trajectory)
     if on_sample!(t)
         sample(t.sampler, t.container) |> t.transformer
@@ -120,9 +122,3 @@ Base.take!(t::Trajectory{<:Any,<:Any,<:AsyncInsertSampleRatioController}) = take
 
 Base.IteratorSize(::Trajectory{<:Any,<:Any,<:AsyncInsertSampleRatioController}) = Base.IsInfinite()
 Base.IteratorSize(::Trajectory) = Base.SizeUnknown()
-
-#####
-
-"A boolean is returned to flag whether to take a sampling step or not"
-on_sample!(t::Trajectory) = on_sample!(t.controller)
-on_sample!(t::Trajectory{<:Episode,<:Any,<:SampleOnEpisodeEndController}) = t.container[]
