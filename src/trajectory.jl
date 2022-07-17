@@ -22,7 +22,7 @@ Supported methoes are:
 """
 Base.@kwdef struct Trajectory{C,S,T}
     container::C
-    sampler::S
+    sampler::S = DummySampler()
     controller::T = InsertSampleRatioController()
     transformer::Any = identity
 
